@@ -893,16 +893,20 @@ function generatePDF(){
 
   // Checkbox disegnata a mano
   const checkbox=(x,cy,checked,label,color)=>{
+    const bx=x, by=cy-3.2, bs=3.8;
     doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
-    doc.rect(x,cy-3,3.5,3.5,'S');
+    doc.rect(bx,by,bs,bs,'S');
     if(checked){
-      doc.setDrawColor(...(color||blue)); doc.setLineWidth(0.6);
-      doc.line(x+0.5,cy-1.5,x+1.5,cy-0.3); doc.line(x+1.5,cy-0.3,x+3,cy-3);
-      doc.setLineWidth(LW);
+      doc.setFillColor(...(color||blue));
+      doc.rect(bx+0.4,by+0.4,bs-0.8,bs-0.8,'F');
+      doc.setFillColor(255,255,255);
+      doc.rect(bx+0.7,by+bs-1.4,1.0,0.6,'F');
+      doc.rect(bx+1.5,by+bs-0.9,1.8,0.6,'F');
     }
+    doc.setLineWidth(LW);
     if(label){
       doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
-      doc.text(label,x+5,cy);
+      doc.text(label,bx+5.5,cy);
     }
   };
 
@@ -1069,67 +1073,67 @@ function generatePDF(){
 
   // Dinamica + corpo
   checkY(40);
-  // Dinamica checkboxes (sinistra)
-  const dinW=contentW*0.55;
-  doc.setDrawColor(...borderGray); doc.rect(margin,y,dinW,38,'S');
-  y=sectionHeader('Cosa è successo? (Dinamica)',y)+2;
+  //   // Dinamica + corpo: layout a 2 colonne con altezza calcolata
+  const dinW=contentW*0.58;
+  const bodyX=margin+dinW+2, bodyW=contentW-dinW-2;
   const dinamicheList=[
-    'Caduto da (caduta dall\'alto)','Caduto in piano','Ha urtato contro','Urtato da',
-    'Schiacciato da','Investito da','Impigliato / agganciato da','A contatto con',
-    'Ha inalato','Ha ingerito','Esposto a agente fisico','Ha messo un piede in fallo',
-    'Movimento scoordinato','Ha fatto uno sforzo'
+    "Caduto da (caduta dall'alto)","Caduto in piano","Ha urtato contro","Urtato da",
+    "Schiacciato da","Investito da","Impigliato / agganciato",
+    "A contatto con","Ha inalato","Ha ingerito",
+    "Esposto a agente fisico","Ha messo un piede in fallo",
+    "Movimento scoordinato","Ha fatto uno sforzo"
   ];
   const selectedDin=document.getElementById('dinamica').value;
   const dinDet=document.getElementById('dinamica_det').value;
-  let dinX=margin+2, dinY=y;
+  const dinRows=Math.ceil(dinamicheList.length/2);
+  const secH=dinRows*6+10;
+  checkY(secH+40);
+  // Header affiancato
+  doc.setFillColor(...blue); doc.rect(margin,y,dinW,6,'F');
+  doc.setFillColor(...blue); doc.rect(bodyX,y,bodyW,6,'F');
+  doc.setTextColor(...white); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+  doc.text("COSA E' SUCCESSO? (DINAMICA)",margin+2,y+4.5);
+  doc.text("DOVE SI E' FATTO MALE?",bodyX+2,y+4.5);
+  y+=6;
+  // Boxes
+  doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
+  doc.rect(margin,y,dinW,secH,'S');
+  doc.rect(bodyX,y,bodyW,secH,'S');
+  // Checkboxes dinamiche 2 colonne
+  const dinHalfW=dinW/2;
   dinamicheList.forEach((d,i)=>{
-    if(i===7){dinX=margin+dinW/2+2; dinY=y-7*6;}
-    checkbox(dinX,dinY,selectedDin===d||selectedDin.includes(d.substring(0,8)),d);
-    dinY+=6;
+    const col=i<7?0:1;
+    const row=i<7?i:i-7;
+    const cx=margin+2+col*dinHalfW;
+    const cy=y+5+row*6;
+    checkbox(cx,cy,selectedDin.includes(d.substring(0,6)),d);
   });
   if(dinDet){
-    doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','italic');
-    doc.text('Specificare: '+dinDet,margin+2,y+dinamicheList.length/2*6+2);
+    doc.setTextColor(...mid); doc.setFontSize(7.5); doc.setFont('helvetica','italic');
+    doc.text('Specificare: '+dinDet,margin+2,y+secH-2);
   }
-  const afterDin=y+Math.ceil(dinamicheList.length/2)*6+2;
-
-  // Corpo (destra) — SVG semplificato
-  const bodyX=margin+dinW+2, bodyW=contentW-dinW-2;
-  const bodyStartY=y-2;
-  doc.setDrawColor(...borderGray); doc.rect(bodyX,bodyStartY,bodyW,38,'S');
-  doc.setTextColor(...blue); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
-  doc.text('DOVE SI È FATTO MALE?',bodyX+2,bodyStartY+5);
-  // Disegno corpo stilizzato
-  const bx=bodyX+bodyW/2, by=bodyStartY+8;
-  doc.setDrawColor(...(bodyParts.size>0?blue:borderGray)); doc.setLineWidth(0.4);
-  // Testa
-  doc.circle(bx,by+4,3.5,'S');
-  // Collo
-  doc.line(bx,by+7.5,bx,by+10);
-  // Torso
-  doc.rect(bx-7,by+10,14,14,'S');
-  // Braccia
-  doc.line(bx-7,by+11,bx-13,by+20); doc.line(bx+7,by+11,bx+13,by+20);
-  // Mani
-  doc.circle(bx-13,by+21,1.5,'S'); doc.circle(bx+13,by+21,1.5,'S');
-  // Gambe
-  doc.line(bx-3,by+24,bx-4,by+35); doc.line(bx+3,by+24,bx+4,by+35);
-  // Piedi
-  doc.line(bx-4,by+35,bx-7,by+36); doc.line(bx+4,by+35,bx+7,by+36);
-  // Etichette parti selezionate
-  if(bodyParts.size>0){
-    doc.setFillColor(...lightBlue);
-    doc.setTextColor(...blue); doc.setFontSize(7); doc.setFont('helvetica','bold');
-    let partY=bodyStartY+32;
-    [...bodyParts].slice(0,3).forEach(p=>{
-      doc.text('▶ '+p,bodyX+2,partY); partY+=4;
-    });
-    if(bodyParts.size>3) doc.text('+ altri...',bodyX+2,partY);
-  }
+  // Corpo stilizzato destra
+  const bx=bodyX+bodyW/2, by2=y+4;
+  doc.setDrawColor(...borderGray); doc.setLineWidth(0.5);
+  doc.circle(bx,by2+3,3,'S');
+  doc.line(bx,by2+6,bx,by2+8);
+  doc.rect(bx-5,by2+8,10,10,'S');
+  doc.line(bx-5,by2+9,bx-9,by2+16); doc.line(bx+5,by2+9,bx+9,by2+16);
+  doc.circle(bx-9,by2+17,1.2,'S'); doc.circle(bx+9,by2+17,1.2,'S');
+  doc.line(bx-2,by2+18,bx-3,by2+27); doc.line(bx+2,by2+18,bx+3,by2+27);
+  doc.line(bx-3,by2+27,bx-5.5,by2+28); doc.line(bx+3,by2+27,bx+5.5,by2+28);
   doc.setLineWidth(LW);
-  y=Math.max(afterDin, bodyStartY+40);
-  y+=3;
-
+  if(bodyParts.size>0){
+    doc.setTextColor(...blue); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    let partY=y+secH-[...bodyParts].length*4-2;
+    partY=Math.max(partY,y+secH-20);
+    [...bodyParts].slice(0,4).forEach(p=>{
+      doc.setFillColor(...lightBlue); doc.rect(bodyX+1,partY-3,bodyW-2,4,'F');
+      doc.setTextColor(...blue); doc.text('● '+p,bodyX+2,partY);
+      partY+=4.5;
+    });
+  }
+  y+=secH+3;
   // ── Contesto (checkboxes Si/No) ──
   checkY(32);
   const siNoItems=[
@@ -1143,16 +1147,16 @@ function generatePDF(){
   doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,28,'S');
   let sinoX=margin+2, sinoY=y+4;
   siNoItems.forEach((item,i)=>{
-    if(i===3){sinoX=margin+contentW/2+2; sinoY=y+4;}
+    if(i===3){sinoX=margin+contentW/2+2; sinoY=y+5;}
     const selEl=document.querySelector('[name="'+item.name+'"].selected');
     const selVal=selEl?selEl.querySelector('span').textContent.trim():'';
     doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','bold');
     doc.text(item.label,sinoX,sinoY);
-    const isSi=selVal==='Sì'||selVal==='Yes'||selVal==='Oui'||selVal==='Ja';
-    const isNo=selVal==='No'||selVal==='Nein'||selVal==='Non';
-    checkbox(sinoX+50,sinoY,isSi,'Sì');
-    checkbox(sinoX+65,sinoY,isNo,'No');
-    sinoY+=8;
+    const isSi=!!selVal&&!['No','Nein','Non'].includes(selVal);
+    const isNo=['No','Nein','Non'].includes(selVal);
+    checkbox(sinoX+52,sinoY,isSi,t('si'));
+    checkbox(sinoX+62,sinoY,isNo,t('no'));
+    sinoY+=7.5;
   });
   y+=30;
 
@@ -1307,16 +1311,19 @@ function generatePDF(){
     };
     // Carica le foto in modo sincrono tramite Promise.all poi salva
     Promise.all(fotoFiles.slice(0,4).map((f,i)=>loadThumb(f,i))).then(()=>{
-      y+=thumbH+4;
+      y+=thumbH+5;
+      // Firme dopo foto
+      const needH=45;
+      if(y+needH>284){ doc.addPage(); drawPageHeader(); y=28; }
+      drawSignatureSection(doc,y,contentW,margin,white,blue,mid,borderGray);
       finalizePDF(doc,currentProto);
     });
-    return; // esce — il salvataggio avviene nel then
+    return;
   }
 
-  // ── FIRME (se non foto o dopo) ──
-  checkY(40);
+  // ── FIRME (se non ci sono foto) ──
+  checkY(45);
   drawSignatureSection(doc,y,contentW,margin,white,blue,mid,borderGray);
-
   finalizePDF(doc,currentProto);
 }
 
