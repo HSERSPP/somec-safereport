@@ -873,175 +873,486 @@ document.querySelectorAll('input,select,textarea').forEach(el=>el.addEventListen
 function generatePDF(){
   const {jsPDF} = window.jspdf;
   const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  const blue=[26,74,122], white=[255,255,255], grayBg=[245,246,248], dark=[26,30,40], mid=[74,80,96], lightBlue=[232,240,250], red=[192,57,43];
-  const W=210, margin=14, contentW=W-2*margin;
+  const blue=[26,74,122], white=[255,255,255], grayBg=[245,246,248], dark=[26,30,40],
+        mid=[74,80,96], lightBlue=[232,240,250], red=[192,57,43], borderGray=[180,185,192];
+  const W=210, margin=10, contentW=W-2*margin;
+  const LW=0.25; // line width standard
 
-  // ── HEADER con logo ──
-  doc.setFillColor(...blue); doc.rect(0,0,W,24,'F');
-  // Logo Somec (base64 trasparente)
-  try {
-    const logoB64 = document.querySelector('.header-logo img').src;
-    doc.addImage(logoB64, 'PNG', margin, 3, 36, 11);
-  } catch(e){}
-  doc.setTextColor(...white); doc.setFontSize(13); doc.setFont('helvetica','bold');
-  doc.text('SOMEC SafeReport',58,10);
-  doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text('MS452-01 — '+t('titolo'),58,16);
-  doc.text('Rev.02',W-margin,10,{align:'right'});
-  doc.text(new Date().toLocaleDateString(),W-margin,16,{align:'right'});
+  // ═══════════════════════════════════════════════
+  // HELPERS
+  // ═══════════════════════════════════════════════
+  let y=0;
+  const pageFooterY=284;
 
-  // ── PROTOCOLLO BOX ──
-  doc.setFillColor(...lightBlue); doc.rect(margin,28,contentW,11,'F');
-  doc.setDrawColor(...blue); doc.setLineWidth(0.3); doc.rect(margin,28,contentW,11,'S');
-  doc.setTextColor(...blue); doc.setFontSize(12); doc.setFont('helvetica','bold');
-  doc.text('Protocollo: '+currentProto, margin+4, 36);
-  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...mid);
-  doc.text(new Date().toLocaleString(), W-margin, 36, {align:'right'});
+  const newPage=()=>{
+    doc.addPage();
+    drawPageHeader();
+    y=28;
+  };
+  const checkY=(needed)=>{ if(y+needed>pageFooterY) newPage(); };
 
-  // ── TIPO EVENTO badge ──
-  const ev=document.querySelector('.event-card.selected .ev-label');
-  if(ev){
-    const evText = ev.textContent.trim();
-    const isDanger = evText.toLowerCase().includes('infort')||evText.toLowerCase().includes('accident')||evText.toLowerCase().includes('unfall');
-    doc.setFillColor(...(isDanger?red:blue));
-    doc.rect(margin,42,contentW,8,'F');
-    doc.setTextColor(...white); doc.setFontSize(10); doc.setFont('helvetica','bold');
-    doc.text('TIPO EVENTO: '+evText.toUpperCase(), W/2, 48, {align:'center'});
-  }
-
-  let y=54;
-
-  const addPageHeader=()=>{
-    doc.setFillColor(...blue); doc.rect(0,0,W,10,'F');
-    doc.setTextColor(...white); doc.setFontSize(8); doc.setFont('helvetica','normal');
-    doc.text('SOMEC SafeReport — MS452-01 — '+currentProto, margin, 7);
-    doc.text('Pag. '+doc.internal.getNumberOfPages(), W-margin, 7, {align:'right'});
-    y=16;
+  // Checkbox disegnata a mano
+  const checkbox=(x,cy,checked,label,color)=>{
+    doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
+    doc.rect(x,cy-3,3.5,3.5,'S');
+    if(checked){
+      doc.setDrawColor(...(color||blue)); doc.setLineWidth(0.6);
+      doc.line(x+0.5,cy-1.5,x+1.5,cy-0.3); doc.line(x+1.5,cy-0.3,x+3,cy-3);
+      doc.setLineWidth(LW);
+    }
+    if(label){
+      doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text(label,x+5,cy);
+    }
   };
 
-  const field=(label,value,newline)=>{
-    if(y>272){ doc.addPage(); addPageHeader(); }
-    const val = String(value||'').trim()||'—';
+  // Row in tabella: label(bold) | value
+  const tableRow=(label,value,rowY,h,colW)=>{
+    const cw=colW||contentW;
+    doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
+    doc.rect(margin,rowY,cw,h,'S');
+    doc.setFillColor(...grayBg); doc.rect(margin,rowY,50,h,'F');
+    doc.setDrawColor(...borderGray); doc.line(margin+50,rowY,margin+50,rowY+h);
     doc.setTextColor(...blue); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
-    doc.text(label.toUpperCase()+':', margin, y);
-    doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(10);
-    const lines=doc.splitTextToSize(val, contentW-56);
-    doc.text(lines, margin+56, y);
-    y += Math.max(6, lines.length*5.2) + (newline?2:0);
+    doc.text(label.toUpperCase(),margin+2,rowY+h/2+1.5);
+    doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    const lines=doc.splitTextToSize(String(value||'—'),cw-53);
+    doc.text(lines,margin+52,rowY+h/2-((lines.length-1)*2.5)+1.5);
   };
 
-  const section=(title)=>{
-    if(y>265){ doc.addPage(); addPageHeader(); }
-    y+=2;
-    doc.setFillColor(...blue); doc.rect(margin,y,contentW,7,'F');
-    doc.setTextColor(...white); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
-    doc.text(title.toUpperCase(), margin+3, y+5);
-    y+=11;
+  // Section header (dark blue band like original)
+  const sectionHeader=(title,sy)=>{
+    doc.setFillColor(...blue); doc.rect(margin,sy,contentW,6,'F');
+    doc.setTextColor(...white); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    doc.text(title.toUpperCase(),margin+2,sy+4.5);
+    return sy+6;
   };
 
-  // ── SEZIONI ──
-  section('1 — '+t('s1'));
-  field(t('data'), document.getElementById('data').value);
-  field(t('ora'), document.getElementById('ora').value);
-  field(t('cantiere'), document.getElementById('cantiere').value);
-  field(t('area'), document.getElementById('area').value);
-  const macchina=document.getElementById('macchina').value;
-  if(macchina) field(t('macchina'), macchina);
-  const lat=document.getElementById('geo-lat').value, lng=document.getElementById('geo-lng').value, acc=document.getElementById('geo-acc').value;
-  if(lat) field('GPS', lat+', '+lng+(acc?' (±'+acc+'m)':'')+'  |  maps.google.com/?q='+lat+','+lng, true);
+  // ═══════════════════════════════════════════════
+  // PAGE HEADER (ripetuto su ogni pagina)
+  // ═══════════════════════════════════════════════
+  const drawPageHeader=()=>{
+    // Bordo esterno header
+    doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
+    doc.rect(margin,8,contentW,14,'S');
+    // Logo area
+    doc.setFillColor(...white); doc.rect(margin,8,38,14,'F');
+    try {
+      const logoB64=document.querySelector('.header-logo img').src;
+      doc.addImage(logoB64,'PNG',margin+2,9.5,34,10);
+    } catch(e){}
+    // Linea verticale separatrice
+    doc.setDrawColor(...borderGray); doc.line(margin+38,8,margin+38,22);
+    // Titolo centrale
+    doc.setTextColor(...dark); doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text('MODULO SICUREZZA',margin+70,14,{align:'center'});
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(...mid);
+    doc.text(t('titolo'),margin+70,19,{align:'center'});
+    // Doc number area (destra)
+    doc.setDrawColor(...borderGray); doc.line(margin+38+contentW*0.55,8,margin+38+contentW*0.55,22);
+    doc.setFontSize(7); doc.setTextColor(...mid);
+    doc.text('Numero Documento',margin+38+contentW*0.55+2,12);
+    doc.setFontSize(9); doc.setTextColor(...blue); doc.setFont('helvetica','bold');
+    doc.text('MS452-01',margin+38+contentW*0.55+2,18);
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...mid);
+    doc.text('Rev.02 — '+new Date().toLocaleDateString('it-IT'),margin+38+contentW*0.55+2,21.5);
+  };
 
-  section('2 — '+t('s2'));
-  field(t('cognome')+' / '+t('nome'), document.getElementById('cognome').value+' '+document.getElementById('nome').value);
-  field(t('azienda'), document.getElementById('azienda').value);
-  field(t('mansione'), document.getElementById('mansione').value);
-  const altri=document.getElementById('altri').value;
-  if(altri) field(t('altri'), altri);
+  // ═══════════════════════════════════════════════
+  // PAGINA 1
+  // ═══════════════════════════════════════════════
+  drawPageHeader();
+  y=25;
 
-  section('3 — '+t('s4'));
-  field(t('descrizione'), document.getElementById('descrizione').value, true);
-  const din=document.getElementById('dinamica').value, dinDet=document.getElementById('dinamica_det').value;
-  if(din) field(t('dinamica'), din+(dinDet?' — '+dinDet:''));
-  if(bodyParts.size>0) field(t('partiSel'), [...bodyParts].join(', '));
-  if(fotoFiles.length>0) field(t('s6'), fotoFiles.length+' foto allegate');
+  // Protocollo + tipo evento
+  doc.setFillColor(...lightBlue); doc.rect(margin,y,contentW,7,'F');
+  doc.setDrawColor(...blue); doc.setLineWidth(0.4); doc.rect(margin,y,contentW,7,'S');
+  doc.setTextColor(...blue); doc.setFontSize(9); doc.setFont('helvetica','bold');
+  doc.text('Protocollo: '+currentProto,margin+2,y+5);
+  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(...mid);
+  doc.text(new Date().toLocaleString('it-IT'),W-margin,y+5,{align:'right'});
+  doc.setLineWidth(LW);
+  y+=7;
 
-  section('4 — '+t('s7'));
-  field(t('trattLabel'), document.getElementById('trattamento').value, true);
-  const den=document.getElementById('denuncia_num').value, prog=document.getElementById('prognosi').value;
-  if(den) field(t('denunciaNum'), den);
-  if(prog) field(t('prognosi'), prog+' gg');
+  // Badge tipo evento
+  const evEl=document.querySelector('.event-card.selected .ev-label');
+  const evText=evEl?evEl.textContent.trim():'—';
+  const isDanger=evText.toLowerCase().match(/infort|accident|unfall/);
+  doc.setFillColor(...(isDanger?red:blue)); doc.rect(margin,y,contentW,6,'F');
+  doc.setTextColor(...white); doc.setFontSize(9); doc.setFont('helvetica','bold');
+  doc.text('TIPO EVENTO: '+evText.toUpperCase(),W/2,y+4.5,{align:'center'});
+  y+=8;
 
-  section('5 — '+t('s8'));
-  const cause=[...document.querySelectorAll('.cause-item.selected')].map(c=>c.querySelector('span').textContent).join(', ');
-  field(t('causePrinc'), cause||'—', true);
-  const nc=document.getElementById('nc_desc').value;
-  if(nc) field(t('ncDesc'), nc);
-
-  section('6 — '+t('s9'));
-  const azioni=[...document.querySelectorAll('#ac-list textarea')].map((el,i)=>el.value.trim()?(i+1)+'. '+el.value.trim():'').filter(Boolean).join('\n');
-  field(t('s9'), azioni||'—', true);
-
-  // DVR / Piano emergenza
-  const dvrEl=document.querySelector('[name="dvr_agg"].selected'), peEl=document.querySelector('[name="pe_agg"].selected');
-  if(dvrEl||peEl){
-    field(t('dvrAgg'), dvrEl?dvrEl.querySelector('span').textContent:'—');
-    field(t('peAgg'), peEl?peEl.querySelector('span').textContent:'—');
-  }
-
-  section('7 — '+t('s10'));
-  field(t('respReparto'), document.getElementById('resp_reparto').value);
-  field('RLS', document.getElementById('rls_nome').value);
-  field(t('compilatore'), document.getElementById('compilatore').value+' ('+document.getElementById('email').value+')');
-  const note=document.getElementById('note_finali').value;
-  if(note) field(t('noteFinali'), note, true);
-
-  // ── FIRME — sempre sulla stessa riga se spazio, altrimenti nuova pagina ──
-  const firmaH=28;
-  if(y+firmaH*2+20 > 272){ doc.addPage(); addPageHeader(); }
-  y+=4;
-
-  // Linea separatrice firme
-  doc.setDrawColor(...blue); doc.setLineWidth(0.3);
-  doc.line(margin, y, W-margin, y); y+=5;
-
-  // Firma compilatore (sinistra) + Firma RSPP (destra) affiancate
-  const halfW=(contentW-8)/2;
-  doc.setTextColor(...blue); doc.setFontSize(8); doc.setFont('helvetica','bold');
-  doc.text('FIRMA COMPILATORE', margin, y);
-  doc.text('FIRMA RSPP / RESPONSABLE HSE', margin+halfW+8, y);
+  // ── SEZIONE 1: DATI GENERALI ──
+  y=sectionHeader('1 — '+t('s1').toUpperCase(),y)+1;
+  // Riga DATA | ORA
+  const col2W=contentW/2-1;
+  tableRow('Data',document.getElementById('data').value,y,7,col2W);
+  // Ora (destra)
+  doc.setDrawColor(...borderGray); doc.rect(margin+col2W+2,y,col2W,7,'S');
+  doc.setFillColor(...grayBg); doc.rect(margin+col2W+2,y,28,7,'F');
+  doc.line(margin+col2W+2+28,y,margin+col2W+2+28,y+7);
+  doc.setTextColor(...blue); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+  doc.text('ORA:',margin+col2W+4,y+5);
+  doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text(document.getElementById('ora').value||'—',margin+col2W+32,y+5);
+  y+=7;
+  tableRow('Cantiere / Sito',document.getElementById('cantiere').value,y,7);y+=7;
+  tableRow('Area / Reparto',document.getElementById('area').value,y,7);y+=7;
+  const macchVal=document.getElementById('macchina').value;
+  if(macchVal){tableRow('Macchina / Attrezzatura',macchVal,y,7);y+=7;}
+  const lat=document.getElementById('geo-lat').value,lng=document.getElementById('geo-lng').value,acc=document.getElementById('geo-acc').value;
+  if(lat){tableRow('GPS',lat+', '+lng+(acc?' (±'+acc+'m)':'')+' — google.com/maps?q='+lat+','+lng,y,7);y+=7;}
   y+=3;
 
+  // ── SEZIONE 2: PERSONA COINVOLTA ──
+  checkY(40);
+  y=sectionHeader('2 — '+t('s2').toUpperCase(),y)+1;
+  // Riga mansione | cognome | nome
+  const col3=contentW/3;
+  doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
+  doc.rect(margin,y,contentW,7,'S');
+  doc.setFillColor(...grayBg);
+  doc.rect(margin,y,22,7,'F'); doc.line(margin+22,y,margin+22,y+7);
+  doc.rect(margin+col3,y,22,7,'F'); doc.line(margin+col3+22,y,margin+col3+22,y+7);
+  doc.rect(margin+col3*2,y,22,7,'F'); doc.line(margin+col3*2+22,y,margin+col3*2+22,y+7);
+  doc.line(margin+col3,y,margin+col3,y+7); doc.line(margin+col3*2,y,margin+col3*2,y+7);
+  doc.setTextColor(...blue); doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.text('AZIENDA:',margin+1,y+4.5);
+  doc.text('COGNOME:',margin+col3+1,y+4.5);
+  doc.text('NOME:',margin+col3*2+1,y+4.5);
+  doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+  doc.text(document.getElementById('azienda').value||'—',margin+24,y+5);
+  doc.text(document.getElementById('cognome').value||'—',margin+col3+24,y+5);
+  doc.text(document.getElementById('nome').value||'—',margin+col3*2+24,y+5);
+  y+=7;
+  tableRow('Mansione',document.getElementById('mansione').value,y,7,contentW/2);
+  const altriVal=document.getElementById('altri').value;
+  if(altriVal){
+    doc.setDrawColor(...borderGray); doc.rect(margin+contentW/2+2,y,contentW/2-2,7,'S');
+    doc.setFillColor(...grayBg); doc.rect(margin+contentW/2+2,y,30,7,'F');
+    doc.line(margin+contentW/2+2+30,y,margin+contentW/2+2+30,y+7);
+    doc.setTextColor(...blue); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text('ALTRI PRESENTI:',margin+contentW/2+3,y+4.5);
+    doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    doc.text(altriVal,margin+contentW/2+33,y+5);
+  }
+  y+=10;
+
+  // ── SEZIONE 3: TIPO EVENTO + CHECKBOXES ──
+  checkY(35);
+  y=sectionHeader('3 — TIPO DI EVENTO / CLASSIFICAZIONE',y)+2;
+  const eventi=[
+    {key:'near-miss',label:'MANCATO INFORTUNIO (Near Miss — successo qualcosa ma nessun ferito)'},
+    {key:'pericolosa',label:'SITUAZIONE PERICOLOSA (potrebbe succedere qualcosa)'},
+    {key:'emergenza',label:'EMERGENZA (es. principio di incendio)'},
+    {key:'lesione',label:'LESIONE (senza lasciare il lavoro)'},
+    {key:'infortunio',label:'INFORTUNIO  □ Medicato  □ Inviato al P.S.'}
+  ];
+  const selectedEv=document.querySelector('input[name="evento"]:checked')?.value||'';
+  eventi.forEach(ev=>{
+    checkbox(margin+2,y+1,selectedEv===ev.key,ev.label,isDanger&&ev.key==='infortunio'?red:blue);
+    y+=6;
+  });
+  y+=2;
+
+  // ── SEZIONE 4: DESCRIZIONE ──
+  checkY(45);
+  y=sectionHeader('4 — '+t('s4').toUpperCase(),y)+1;
+  const descVal=document.getElementById('descrizione').value||'—';
+  const descLines=doc.splitTextToSize(descVal,contentW-4);
+  const descH=Math.max(20,descLines.length*4.5+4);
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,descH,'S');
+  doc.setTextColor(...dark); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(descLines,margin+2,y+5);
+  y+=descH+2;
+
+  // Dinamica + corpo
+  checkY(40);
+  // Dinamica checkboxes (sinistra)
+  const dinW=contentW*0.55;
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,dinW,38,'S');
+  y=sectionHeader('Cosa è successo? (Dinamica)',y)+2;
+  const dinamicheList=[
+    'Caduto da (caduta dall\'alto)','Caduto in piano','Ha urtato contro','Urtato da',
+    'Schiacciato da','Investito da','Impigliato / agganciato da','A contatto con',
+    'Ha inalato','Ha ingerito','Esposto a agente fisico','Ha messo un piede in fallo',
+    'Movimento scoordinato','Ha fatto uno sforzo'
+  ];
+  const selectedDin=document.getElementById('dinamica').value;
+  const dinDet=document.getElementById('dinamica_det').value;
+  let dinX=margin+2, dinY=y;
+  dinamicheList.forEach((d,i)=>{
+    if(i===7){dinX=margin+dinW/2+2; dinY=y-7*6;}
+    checkbox(dinX,dinY,selectedDin===d||selectedDin.includes(d.substring(0,8)),d);
+    dinY+=6;
+  });
+  if(dinDet){
+    doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','italic');
+    doc.text('Specificare: '+dinDet,margin+2,y+dinamicheList.length/2*6+2);
+  }
+  const afterDin=y+Math.ceil(dinamicheList.length/2)*6+2;
+
+  // Corpo (destra) — SVG semplificato
+  const bodyX=margin+dinW+2, bodyW=contentW-dinW-2;
+  const bodyStartY=y-2;
+  doc.setDrawColor(...borderGray); doc.rect(bodyX,bodyStartY,bodyW,38,'S');
+  doc.setTextColor(...blue); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+  doc.text('DOVE SI È FATTO MALE?',bodyX+2,bodyStartY+5);
+  // Disegno corpo stilizzato
+  const bx=bodyX+bodyW/2, by=bodyStartY+8;
+  doc.setDrawColor(...(bodyParts.size>0?blue:borderGray)); doc.setLineWidth(0.4);
+  // Testa
+  doc.circle(bx,by+4,3.5,'S');
+  // Collo
+  doc.line(bx,by+7.5,bx,by+10);
+  // Torso
+  doc.rect(bx-7,by+10,14,14,'S');
+  // Braccia
+  doc.line(bx-7,by+11,bx-13,by+20); doc.line(bx+7,by+11,bx+13,by+20);
+  // Mani
+  doc.circle(bx-13,by+21,1.5,'S'); doc.circle(bx+13,by+21,1.5,'S');
+  // Gambe
+  doc.line(bx-3,by+24,bx-4,by+35); doc.line(bx+3,by+24,bx+4,by+35);
+  // Piedi
+  doc.line(bx-4,by+35,bx-7,by+36); doc.line(bx+4,by+35,bx+7,by+36);
+  // Etichette parti selezionate
+  if(bodyParts.size>0){
+    doc.setFillColor(...lightBlue);
+    doc.setTextColor(...blue); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    let partY=bodyStartY+32;
+    [...bodyParts].slice(0,3).forEach(p=>{
+      doc.text('▶ '+p,bodyX+2,partY); partY+=4;
+    });
+    if(bodyParts.size>3) doc.text('+ altri...',bodyX+2,partY);
+  }
+  doc.setLineWidth(LW);
+  y=Math.max(afterDin, bodyStartY+40);
+  y+=3;
+
+  // ── Contesto (checkboxes Si/No) ──
+  checkY(32);
+  const siNoItems=[
+    {label:'Attività ordinaria?',name:'attord'},
+    {label:'Indossava i DPI?',name:'dpi_ind'},
+    {label:'Formazione svolta?',name:'form_svolta'},
+    {label:'Attrezzature conformi?',name:'attr_conf'},
+    {label:'Spazi adeguati?',name:'spazi'},
+    {label:'Procedure definite?',name:'proc_def'}
+  ];
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,28,'S');
+  let sinoX=margin+2, sinoY=y+4;
+  siNoItems.forEach((item,i)=>{
+    if(i===3){sinoX=margin+contentW/2+2; sinoY=y+4;}
+    const selEl=document.querySelector('[name="'+item.name+'"].selected');
+    const selVal=selEl?selEl.querySelector('span').textContent.trim():'';
+    doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    doc.text(item.label,sinoX,sinoY);
+    const isSi=selVal==='Sì'||selVal==='Yes'||selVal==='Oui'||selVal==='Ja';
+    const isNo=selVal==='No'||selVal==='Nein'||selVal==='Non';
+    checkbox(sinoX+50,sinoY,isSi,'Sì');
+    checkbox(sinoX+65,sinoY,isNo,'No');
+    sinoY+=8;
+  });
+  y+=30;
+
+  // ═══════════════════════════════════════════════
+  // PAGINA 2
+  // ═══════════════════════════════════════════════
+  newPage();
+
+  // ── SEZIONE 5: TRATTAMENTO ──
+  y=sectionHeader('5 — '+t('s7').toUpperCase(),y)+1;
+  const trattVal=document.getElementById('trattamento').value||'—';
+  const trattLines=doc.splitTextToSize(trattVal,contentW-4);
+  const trattH=Math.max(14,trattLines.length*4.5+4);
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,trattH,'S');
+  doc.setTextColor(...dark); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(trattLines,margin+2,y+5);
+  y+=trattH+2;
+
+  // INFORTUNIO box
+  const denVal=document.getElementById('denuncia_num').value;
+  const progVal=document.getElementById('prognosi').value;
+  if(denVal||progVal||isDanger){
+    doc.setDrawColor(...red); doc.setLineWidth(0.5);
+    doc.rect(margin,y,contentW,9,'S');
+    doc.setLineWidth(LW); doc.setFillColor(254,235,232); doc.rect(margin,y,contentW,9,'F');
+    doc.setDrawColor(...red); doc.rect(margin,y,contentW,9,'S');
+    doc.setTextColor(...red); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    doc.text('INFORTUNIO',margin+2,y+6);
+    doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    doc.text('N° denuncia: '+(denVal||'—'),margin+35,y+6);
+    doc.text('Giorni prognosi: '+(progVal||'—'),margin+110,y+6);
+    y+=11;
+  }
+  y+=2;
+
+  // ── SEZIONE 6: ANALISI CAUSE ──
+  checkY(50);
+  y=sectionHeader('6 — '+t('s8').toUpperCase(),y)+1;
+  // Procedure rispettate
+  const procRispEl=document.querySelector('[name="proc_risp"].selected');
+  const procRispVal=procRispEl?procRispEl.querySelector('span').textContent:'';
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,7,'S');
+  doc.setTextColor(...dark); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text('Le procedure di lavoro sono state rispettate:',margin+2,y+5);
+  const isSiProc=procRispVal==='Sì'||procRispVal==='Yes'||procRispVal==='Oui'||procRispVal==='Ja';
+  checkbox(margin+100,y+1,isSiProc,'Sì');
+  checkbox(margin+115,y+1,!isSiProc&&!!procRispVal,'No');
+  y+=9;
+
+  // Cause checkboxes su griglia 2 colonne
+  const causeList=[...document.querySelectorAll('.cause-item')].map(c=>({
+    label:c.querySelector('span').textContent.trim(),
+    checked:c.classList.contains('selected')
+  }));
+  const causeColW=contentW/2;
+  const causeRows=Math.ceil(causeList.length/2);
+  const causeH=causeRows*6+4;
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,causeH,'S');
+  doc.setTextColor(...blue); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+  doc.text('CAUSE PRINCIPALI RILEVATE:',margin+2,y+4);
+  let cX=margin+2, cY=y+8;
+  causeList.forEach((c,i)=>{
+    if(i===Math.ceil(causeList.length/2)){cX=margin+causeColW+2; cY=y+8;}
+    checkbox(cX,cY,c.checked,c.label,red);
+    cY+=6;
+  });
+  y+=causeH+2;
+
+  // NC
+  const ncVal=document.getElementById('nc_desc').value;
+  checkY(16);
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,14,'S');
+  doc.setFillColor(...grayBg); doc.rect(margin,y,40,14,'F'); doc.line(margin+40,y,margin+40,y+14);
+  doc.setTextColor(...blue); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+  doc.text('NC RILEVATA:',margin+2,y+5);
+  checkbox(margin+2,y+9,!!ncVal,'Sì — Descrizione:',red);
+  doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+  doc.text(ncVal||'Nessuna NC rilevata',margin+42,y+9);
+  y+=16;
+
+  // ── SEZIONE 7: AZIONI CORRETTIVE ──
+  checkY(25);
+  y=sectionHeader('7 — '+t('s9').toUpperCase(),y)+1;
+  const azioniList=[...document.querySelectorAll('#ac-list textarea')].map((el,i)=>el.value.trim()?(i+1)+'. '+el.value.trim():'').filter(Boolean);
+  const azioniText=azioniList.length>0?azioniList.join('\n'):'Nessuna azione da intraprendere';
+  const azioniLines=doc.splitTextToSize(azioniText,contentW-4);
+  const azioniH=Math.max(12,azioniLines.length*4.5+4);
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,azioniH,'S');
+  doc.setTextColor(...dark); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(azioniLines,margin+2,y+5);
+  y+=azioniH+1;
+
+  // DVR / Piano emergenza
+  const dvrEl=document.querySelector('[name="dvr_agg"].selected');
+  const peEl=document.querySelector('[name="pe_agg"].selected');
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,8,'S');
+  doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text('Aggiornamento Valutazione dei Rischi:',margin+2,y+5.5);
+  const dvrSi=dvrEl&&(dvrEl.querySelector('span').textContent==='Sì'||dvrEl.querySelector('span').textContent==='Yes');
+  checkbox(margin+82,y+2,dvrSi,'Sì'); checkbox(margin+93,y+2,dvrEl&&!dvrSi,'No');
+  doc.text('Aggiornamento Piano di emergenza:',margin+105,y+5.5);
+  const peSi=peEl&&(peEl.querySelector('span').textContent==='Sì'||peEl.querySelector('span').textContent==='Yes');
+  checkbox(margin+178,y+2,peSi,'Sì'); checkbox(margin+188,y+2,peEl&&!peSi,'No');
+  y+=10;
+
+  // ── SEZIONE 8: RESPONSABILI + FIRME ──
+  checkY(70);
+  y=sectionHeader('8 — '+t('s10').toUpperCase(),y)+1;
+
+  // Resp. reparto | RLS
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,8,'S');
+  const halfResp=(contentW-2)/2;
+  doc.setFillColor(...grayBg); doc.rect(margin,y,35,8,'F'); doc.line(margin+35,y,margin+35,y+8);
+  doc.line(margin+halfResp,y,margin+halfResp,y+8);
+  doc.setFillColor(...grayBg); doc.rect(margin+halfResp+2,y,35,8,'F'); doc.line(margin+halfResp+2+35,y,margin+halfResp+2+35,y+8);
+  doc.setTextColor(...blue); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+  doc.text('RESP. REPARTO:',margin+1,y+5.5); doc.text('RLS:',margin+halfResp+3,y+5.5);
+  doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text(document.getElementById('resp_reparto').value||'—',margin+37,y+5.5);
+  doc.text(document.getElementById('rls_nome').value||'—',margin+halfResp+38,y+5.5);
+  y+=8;
+
+  // Compilatore
+  tableRow('Segnalato da',document.getElementById('compilatore').value+' ('+document.getElementById('email').value+')',y,7);
+  y+=7;
+  const noteVal=document.getElementById('note_finali').value;
+  if(noteVal){tableRow('Note finali',noteVal,y,7);y+=7;}
+  y+=3;
+
+  // ── FOTO MINIATURE ──
+  if(fotoFiles.length>0){
+    checkY(45);
+    y=sectionHeader('FOTO ALLEGATE ('+fotoFiles.length+')',y)+2;
+    const thumbW=38, thumbH=30, thumbGap=4;
+    const loadThumb=(file,idx)=>{
+      return new Promise(resolve=>{
+        const reader=new FileReader();
+        reader.onload=e=>{
+          try{
+            const tx=margin+(thumbW+thumbGap)*idx;
+            if(tx+thumbW<=W-margin){
+              doc.setDrawColor(...borderGray); doc.rect(tx,y,thumbW,thumbH,'S');
+              doc.addImage(e.target.result,'JPEG',tx+1,y+1,thumbW-2,thumbH-6);
+              doc.setTextColor(...mid); doc.setFontSize(7);
+              doc.text('Foto '+(idx+1),tx+thumbW/2,y+thumbH-1,{align:'center'});
+            }
+          }catch(err){}
+          resolve();
+        };
+        reader.readAsDataURL(file);
+      });
+    };
+    // Carica le foto in modo sincrono tramite Promise.all poi salva
+    Promise.all(fotoFiles.slice(0,4).map((f,i)=>loadThumb(f,i))).then(()=>{
+      y+=thumbH+4;
+      finalizePDF(doc,currentProto);
+    });
+    return; // esce — il salvataggio avviene nel then
+  }
+
+  // ── FIRME (se non foto o dopo) ──
+  checkY(40);
+  drawSignatureSection(doc,y,contentW,margin,white,blue,mid,borderGray);
+
+  finalizePDF(doc,currentProto);
+}
+
+function drawSignatureSection(doc,y,contentW,margin,white,blue,mid,borderGray){
+  const LW=0.25;
+  const halfW=(contentW-4)/2;
+  doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
+  // Labels
+  doc.setTextColor(...blue); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text('FIRMA COMPILATORE',margin,y+5);
+  doc.text('FIRMA RSPP / RESPONSABLE HSE',margin+halfW+4,y+5);
+  y+=7;
+  // Boxes
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,halfW,26,'S');
+  doc.rect(margin+halfW+4,y,halfW,26,'S');
   const canvas=document.getElementById('firma-canvas');
   const canvasRSPP=document.getElementById('firma-rspp-canvas');
-  const firmaY=y;
+  function isFE(id){const c=document.getElementById(id);return!c.getContext('2d').getImageData(0,0,c.width,c.height).data.some(v=>v!==0);}
+  if(!isFE('firma-canvas')){doc.addImage(canvas.toDataURL('image/png'),'PNG',margin+1,y+1,halfW-2,24);}
+  else{doc.setTextColor(180,180,180);doc.setFontSize(9);doc.setFont('helvetica','italic');doc.text('(non firmato)',margin+halfW/2,y+14,{align:'center'});}
+  if(!isFE('firma-rspp-canvas')){doc.addImage(canvasRSPP.toDataURL('image/png'),'PNG',margin+halfW+5,y+1,halfW-2,24);}
+  else{doc.setTextColor(180,180,180);doc.setFontSize(9);doc.setFont('helvetica','italic');doc.text('(da completare)',margin+halfW+4+halfW/2,y+14,{align:'center'});}
+}
 
-  if(!isFirmaEmpty('firma-canvas')){
-    doc.addImage(canvas.toDataURL('image/png'),'PNG',margin,firmaY,halfW,firmaH);
-  } else {
-    doc.setDrawColor(200,200,200); doc.rect(margin,firmaY,halfW,firmaH,'S');
-    doc.setTextColor(180,180,180); doc.setFontSize(9); doc.setFont('helvetica','italic');
-    doc.text('(non firmato)',margin+halfW/2,firmaY+firmaH/2,{align:'center'});
-  }
-
-  if(!isFirmaEmpty('firma-rspp-canvas')){
-    doc.addImage(canvasRSPP.toDataURL('image/png'),'PNG',margin+halfW+8,firmaY,halfW,firmaH);
-  } else {
-    doc.setDrawColor(200,200,200); doc.rect(margin+halfW+8,firmaY,halfW,firmaH,'S');
-    doc.setTextColor(180,180,180); doc.setFontSize(9); doc.setFont('helvetica','italic');
-    doc.text('(da completare)',margin+halfW+8+halfW/2,firmaY+firmaH/2,{align:'center'});
-  }
-  y+=firmaH+6;
-
-  // ── FOOTER su ogni pagina ──
+function finalizePDF(doc,proto){
+  const blue=[26,74,122], white=[255,255,255], mid=[74,80,96];
+  const W=210, margin=10;
   const totalPages=doc.internal.getNumberOfPages();
   for(let p=1;p<=totalPages;p++){
     doc.setPage(p);
     doc.setFillColor(...blue); doc.rect(0,287,W,10,'F');
     doc.setTextColor(...white); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
-    doc.text('SOMEC SafeReport · MS452-01 · Somec Navale S.p.A. · HSE Department', W/2, 293, {align:'center'});
-    doc.text('Pag. '+p+'/'+totalPages, W-margin, 293, {align:'right'});
+    doc.text('SOMEC SafeReport · MS452-01 · Somec Navale S.p.A. · HSE Department',W/2,293,{align:'center'});
+    doc.text('Pag. '+p+'/'+totalPages,W-margin,293,{align:'right'});
   }
-
-  doc.save('MS452_'+currentProto+'.pdf');
+  doc.save('MS452_'+proto+'.pdf');
 }
 
 // ── SUBMIT ────────────────────────────────────────
