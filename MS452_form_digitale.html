@@ -893,15 +893,14 @@ function generatePDF(){
 
   // Checkbox disegnata a mano
   const checkbox=(x,cy,checked,label,color)=>{
-    // Box bordo
-    doc.setDrawColor(...borderGray); doc.setFillColor(255,255,255); doc.setLineWidth(LW);
+    // Draw white background box with border
+    doc.setFillColor(255,255,255);
+    doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
     doc.rect(x,cy-3.5,4,4,'FD');
     if(checked){
-      // X mark as two text characters — universally supported
+      // Filled colored inner square as checkmark indicator
       doc.setFillColor(...(color||blue));
-      doc.rect(x,cy-3.5,4,4,'F');
-      doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
-      doc.text('v',x+0.5,cy-0.2);
+      doc.rect(x+0.8,cy-2.7,2.4,2.4,'F');
     }
     doc.setLineWidth(LW);
     if(label){
@@ -1055,7 +1054,17 @@ function generatePDF(){
   ];
   const selectedEv=document.querySelector('input[name="evento"]:checked')?.value||'';
   eventi.forEach(ev=>{
-    checkbox(margin+2,y+1,selectedEv===ev.key,ev.label,isDanger&&ev.key==='infortunio'?red:blue);
+    const evChecked=selectedEv===ev.key;
+    const evColor=isDanger&&ev.key==='infortunio'?red:blue;
+    // Box
+    doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
+    doc.rect(margin+2,y-2.5,4,4,'FD');
+    if(evChecked){
+      doc.setFillColor(...evColor);
+      doc.rect(margin+2.8,y-1.7,2.4,2.4,'F');
+    }
+    doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(ev.label,margin+7.5,y+0.5);
     y+=6;
   });
   y+=2;
@@ -1107,7 +1116,11 @@ function generatePDF(){
     const cx=margin+2+col*dinHalfW;
     const cy=y+5+row*6;
     const dinMatch = selectedDin && (selectedDin === d || selectedDin.includes(d.split(' ')[0]+' '+d.split(' ')[1]));
-    checkbox(cx,cy,dinMatch,d);
+    doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
+    doc.rect(cx,cy-3,4,4,'FD');
+    if(dinMatch){ doc.setFillColor(...blue); doc.rect(cx+0.8,cy-2.2,2.4,2.4,'F'); }
+    doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(d,cx+5.5,cy);
   });
   if(dinDet){
     doc.setTextColor(...mid); doc.setFontSize(7.5); doc.setFont('helvetica','italic');
@@ -1236,8 +1249,16 @@ function generatePDF(){
     doc.text(item.label,sinoX,sinoY);
     const isSi=['Si','Sì','Yes','Oui','Ja'].some(v=>sinoSelVal.includes(v));
     const isNo=['No','Nein','Non'].some(v=>sinoSelVal===v);
-    checkbox(sinoX+52,sinoY+0.5,isSi,t('si'));
-    checkbox(sinoX+63,sinoY+0.5,isNo,t('no'));
+    // SI box inline
+    doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
+    doc.rect(sinoX+52,sinoY-3,4,4,'FD');
+    if(isSi){ doc.setFillColor(...blue); doc.rect(sinoX+52.8,sinoY-2.2,2.4,2.4,'F'); }
+    doc.setTextColor(...dark); doc.setFontSize(8); doc.text(t('si'),sinoX+57.5,sinoY);
+    // NO box inline
+    doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray);
+    doc.rect(sinoX+66,sinoY-3,4,4,'FD');
+    if(isNo){ doc.setFillColor(...blue); doc.rect(sinoX+66.8,sinoY-2.2,2.4,2.4,'F'); }
+    doc.setTextColor(...dark); doc.text(t('no'),sinoX+71.5,sinoY);
     sinoY+=7.5;
   });
   y+=30;
@@ -1280,14 +1301,22 @@ function generatePDF(){
   // Procedure rispettate
   const procRispEl=document.querySelector('[name="proc_risp"].selected');
   const procRispVal=procRispEl?procRispEl.querySelector('span').textContent:'';
-  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW-24,8,'S');
-  doc.rect(margin+contentW-24,y,24,8,'S');
+  doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
+  doc.rect(margin,y,contentW,8,'S');
   doc.setTextColor(...dark); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
   doc.text('Le procedure di lavoro sono state rispettate:',margin+2,y+5.5);
   const isSiProc=!!procRispVal&&!['No','Nein','Non'].includes(procRispVal);
   const isNoProc=['No','Nein','Non'].includes(procRispVal);
-  checkbox(margin+contentW-22,y+2,isSiProc,'Si');
-  checkbox(margin+contentW-10,y+2,isNoProc,'No');
+  // SI box
+  doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray);
+  doc.rect(margin+contentW-28,y+2,4,4,'FD');
+  if(isSiProc){ doc.setFillColor(...blue); doc.rect(margin+contentW-27.2,y+2.8,2.4,2.4,'F'); }
+  doc.setTextColor(...dark); doc.setFontSize(8); doc.text('Si',margin+contentW-23,y+5.5);
+  // NO box
+  doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray);
+  doc.rect(margin+contentW-15,y+2,4,4,'FD');
+  if(isNoProc){ doc.setFillColor(...blue); doc.rect(margin+contentW-14.2,y+2.8,2.4,2.4,'F'); }
+  doc.setTextColor(...dark); doc.text('No',margin+contentW-10,y+5.5);
   y+=10;
 
   // Cause checkboxes su griglia 2 colonne
@@ -1304,7 +1333,12 @@ function generatePDF(){
   let cX=margin+2, cY=y+8;
   causeList.forEach((c,i)=>{
     if(i===Math.ceil(causeList.length/2)){cX=margin+causeColW+2; cY=y+8;}
-    checkbox(cX,cY,c.checked,c.label,red);
+    // Causa inline
+    doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
+    doc.rect(cX,cY-3,4,4,'FD');
+    if(c.checked){ doc.setFillColor(...red); doc.rect(cX+0.8,cY-2.2,2.4,2.4,'F'); }
+    doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(c.label,cX+5.5,cY);
     cY+=6;
   });
   y+=causeH+2;
@@ -1316,7 +1350,11 @@ function generatePDF(){
   doc.setFillColor(...grayBg); doc.rect(margin,y,40,14,'F'); doc.line(margin+40,y,margin+40,y+14);
   doc.setTextColor(...blue); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
   doc.text('NC RILEVATA:',margin+2,y+5);
-  checkbox(margin+2,y+9,!!ncVal,'Si - Descrizione:',red);
+  doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
+  doc.rect(margin+2,y+6,4,4,'FD');
+  if(ncVal){ doc.setFillColor(...red); doc.rect(margin+2.8,y+6.8,2.4,2.4,'F'); }
+  doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text('Si - Descrizione:',margin+7.5,y+9.5);
   doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
   if(ncVal) doc.text(ncVal,margin+42,y+9);
   else { doc.setTextColor(...mid); doc.text('Nessuna',margin+42,y+9); }
@@ -1338,24 +1376,39 @@ function generatePDF(){
   const dvrEl=document.querySelector('[name="dvr_agg"].selected');
   const peEl=document.querySelector('[name="pe_agg"].selected');
   // DVR e PE - due righe indipendenti
-  const dvrSi=dvrEl&&['Si','Si','Yes','Ja'].some(v=>dvrEl.querySelector('span').textContent.includes(v));
-  const peSi=peEl&&['Si','Si','Yes','Ja'].some(v=>peEl.querySelector('span').textContent.includes(v));
+  const dvrSi=!!(dvrEl&&dvrEl.querySelector('span')&&!['No','Nein','Non'].includes(dvrEl.querySelector('span').textContent.trim()));
+  const peSi=!!(peEl&&peEl.querySelector('span')&&!['No','Nein','Non'].includes(peEl.querySelector('span').textContent.trim()));
   // Riga DVR
-  checkY(8);
-  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW-30,7,'S');
-  doc.rect(margin+contentW-30,y,30,7,'S');
+  checkY(7);
+  doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
+  doc.rect(margin,y,contentW,7,'S');
   doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
   doc.text('Aggiornamento Valutazione dei Rischi (DVR):',margin+2,y+5);
-  checkbox(margin+contentW-26,y+1.5,dvrSi,'Si');
-  checkbox(margin+contentW-14,y+1.5,dvrEl&&!dvrSi,'No');
+  // Checkbox SI
+  doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray);
+  doc.rect(margin+contentW-26,y+1.5,4,4,'FD');
+  if(dvrSi){ doc.setFillColor(...blue); doc.rect(margin+contentW-25.2,y+2.3,2.4,2.4,'F'); }
+  doc.setTextColor(...dark); doc.setFontSize(8); doc.text('Si',margin+contentW-21,y+5);
+  // Checkbox NO
+  doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray);
+  doc.rect(margin+contentW-14,y+1.5,4,4,'FD');
+  if(dvrEl&&!dvrSi){ doc.setFillColor(...blue); doc.rect(margin+contentW-13.2,y+2.3,2.4,2.4,'F'); }
+  doc.setTextColor(...dark); doc.text('No',margin+contentW-9,y+5);
   y+=7;
   // Riga PE
-  checkY(8);
-  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW-30,7,'S');
-  doc.rect(margin+contentW-30,y,30,7,'S');
+  checkY(7);
+  doc.setDrawColor(...borderGray);
+  doc.rect(margin,y,contentW,7,'S');
+  doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
   doc.text('Aggiornamento Piano di emergenza ed evacuazione:',margin+2,y+5);
-  checkbox(margin+contentW-26,y+1.5,peSi,'Si');
-  checkbox(margin+contentW-14,y+1.5,peEl&&!peSi,'No');
+  doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray);
+  doc.rect(margin+contentW-26,y+1.5,4,4,'FD');
+  if(peSi){ doc.setFillColor(...blue); doc.rect(margin+contentW-25.2,y+2.3,2.4,2.4,'F'); }
+  doc.setTextColor(...dark); doc.setFontSize(8); doc.text('Si',margin+contentW-21,y+5);
+  doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray);
+  doc.rect(margin+contentW-14,y+1.5,4,4,'FD');
+  if(peEl&&!peSi){ doc.setFillColor(...blue); doc.rect(margin+contentW-13.2,y+2.3,2.4,2.4,'F'); }
+  doc.setTextColor(...dark); doc.text('No',margin+contentW-9,y+5);
   y+=9;
 
   // ── SEZIONE 8: RESPONSABILI + FIRME ──
