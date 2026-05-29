@@ -894,14 +894,20 @@ function generatePDF(){
   // Checkbox disegnata a mano
   const checkbox=(x,cy,checked,label,color)=>{
     const bx=x, by=cy-3.2, bs=3.8;
+    // Draw box
+    doc.setFillColor(255,255,255);
     doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
-    doc.rect(bx,by,bs,bs,'S');
+    doc.rect(bx,by,bs,bs,'FD');
     if(checked){
+      // Filled colored box
       doc.setFillColor(...(color||blue));
-      doc.rect(bx+0.4,by+0.4,bs-0.8,bs-0.8,'F');
+      doc.rect(bx,by,bs,bs,'F');
+      // White checkmark: two filled rectangles forming a check shape
       doc.setFillColor(255,255,255);
-      doc.rect(bx+0.7,by+bs-1.4,1.0,0.6,'F');
-      doc.rect(bx+1.5,by+bs-0.9,1.8,0.6,'F');
+      // Left short stroke of checkmark
+      doc.rect(bx+0.5,by+bs*0.55,1.1,0.7,'F');
+      // Right long stroke of checkmark  
+      doc.rect(bx+1.2,by+0.4,0.7,bs*0.65,'F');
     }
     doc.setLineWidth(LW);
     if(label){
@@ -1047,11 +1053,11 @@ function generatePDF(){
   checkY(35);
   y=sectionHeader('3 — TIPO DI EVENTO / CLASSIFICAZIONE',y)+2;
   const eventi=[
-    {key:'near-miss',label:'MANCATO INFORTUNIO (Near Miss — successo qualcosa ma nessun ferito)'},
+    {key:'near-miss',label:'MANCATO INFORTUNIO (Near Miss)'},
     {key:'pericolosa',label:'SITUAZIONE PERICOLOSA (potrebbe succedere qualcosa)'},
     {key:'emergenza',label:'EMERGENZA (es. principio di incendio)'},
     {key:'lesione',label:'LESIONE (senza lasciare il lavoro)'},
-    {key:'infortunio',label:'INFORTUNIO  □ Medicato  □ Inviato al P.S.'}
+    {key:'infortunio',label:'INFORTUNIO (con prognosi / Pronto Soccorso)'}
   ];
   const selectedEv=document.querySelector('input[name="evento"]:checked')?.value||'';
   eventi.forEach(ev=>{
@@ -1086,7 +1092,7 @@ function generatePDF(){
   const selectedDin=document.getElementById('dinamica').value;
   const dinDet=document.getElementById('dinamica_det').value;
   const dinRows=Math.ceil(dinamicheList.length/2);
-  const secH=dinRows*6+10;
+  const secH=Math.max(dinRows*6+10, 52); // min height to fit body figure
   checkY(secH+40);
   // Header affiancato
   doc.setFillColor(...blue); doc.rect(margin,y,dinW,6,'F');
@@ -1106,32 +1112,106 @@ function generatePDF(){
     const row=i<7?i:i-7;
     const cx=margin+2+col*dinHalfW;
     const cy=y+5+row*6;
-    checkbox(cx,cy,selectedDin.includes(d.substring(0,6)),d);
+    const dinMatch = selectedDin && (selectedDin === d || selectedDin.includes(d.split(' ')[0]+' '+d.split(' ')[1]));
+    checkbox(cx,cy,dinMatch,d);
   });
   if(dinDet){
     doc.setTextColor(...mid); doc.setFontSize(7.5); doc.setFont('helvetica','italic');
     doc.text('Specificare: '+dinDet,margin+2,y+secH-2);
   }
-  // Corpo stilizzato destra
-  const bx=bodyX+bodyW/2, by2=y+4;
-  doc.setDrawColor(...borderGray); doc.setLineWidth(0.5);
-  doc.circle(bx,by2+3,3,'S');
-  doc.line(bx,by2+6,bx,by2+8);
-  doc.rect(bx-5,by2+8,10,10,'S');
-  doc.line(bx-5,by2+9,bx-9,by2+16); doc.line(bx+5,by2+9,bx+9,by2+16);
-  doc.circle(bx-9,by2+17,1.2,'S'); doc.circle(bx+9,by2+17,1.2,'S');
-  doc.line(bx-2,by2+18,bx-3,by2+27); doc.line(bx+2,by2+18,bx+3,by2+27);
-  doc.line(bx-3,by2+27,bx-5.5,by2+28); doc.line(bx+3,by2+27,bx+5.5,by2+28);
-  doc.setLineWidth(LW);
+  // Corpo anatomico fedele all'originale — vista frontale
+  const figX=bodyX+bodyW*0.3, figY=y+2, scale=1.0;
+  const s=scale;
+  doc.setDrawColor(...blue); doc.setLineWidth(0.5);
+  doc.setFillColor(240,245,252);
+  
+  // Determina parti selezionate per evidenziatura
+  const bodyPartMap={
+    'Testa':      {shape:'circle', cx:figX,    cy:figY+4*s,  r:3.5*s},
+    'Collo':      {shape:'rect',   x:figX-1.5*s, y:figY+7.5*s, w:3*s,  h:2.5*s},
+    'Torso':      {shape:'rect',   x:figX-6*s,   y:figY+10*s,  w:12*s, h:12*s},
+    'Addome':     {shape:'rect',   x:figX-5.5*s, y:figY+18*s,  w:11*s, h:5*s},
+    'Braccio sinistro': {shape:'rect', x:figX-11*s, y:figY+10*s, w:4*s, h:11*s},
+    'Braccio destro':   {shape:'rect', x:figX+7*s,  y:figY+10*s, w:4*s, h:11*s},
+    'Mano sinistra':    {shape:'ellipse', cx:figX-9*s, cy:figY+23*s, rx:2.5*s, ry:2*s},
+    'Mano destra':      {shape:'ellipse', cx:figX+9*s, cy:figY+23*s, rx:2.5*s, ry:2*s},
+    'Gamba sinistra':   {shape:'rect', x:figX-6*s,  y:figY+25*s, w:5*s, h:13*s},
+    'Gamba destra':     {shape:'rect', x:figX+1*s,  y:figY+25*s, w:5*s, h:13*s},
+    'Piede sinistro':   {shape:'ellipse', cx:figX-3.5*s, cy:figY+39*s, rx:3.5*s, ry:2*s},
+    'Piede destro':     {shape:'ellipse', cx:figX+3.5*s, cy:figY+39*s, rx:3.5*s, ry:2*s},
+  };
+
+  // Disegna prima le parti evidenziate (sfondo rosso)
   if(bodyParts.size>0){
-    doc.setTextColor(...blue); doc.setFontSize(7); doc.setFont('helvetica','bold');
-    let partY=y+secH-[...bodyParts].length*4-2;
-    partY=Math.max(partY,y+secH-20);
-    [...bodyParts].slice(0,4).forEach(p=>{
-      doc.setFillColor(...lightBlue); doc.rect(bodyX+1,partY-3,bodyW-2,4,'F');
-      doc.setTextColor(...blue); doc.text('● '+p,bodyX+2,partY);
+    [...bodyParts].forEach(p=>{
+      const part=bodyPartMap[p];
+      if(!part) return;
+      doc.setFillColor(220,50,50);
+      doc.setDrawColor(180,20,20); doc.setLineWidth(0.5);
+      if(part.shape==='circle') doc.circle(part.cx,part.cy,part.r,'FD');
+      else if(part.shape==='rect') doc.rect(part.x,part.y,part.w,part.h,'FD');
+      else if(part.shape==='ellipse') doc.ellipse(part.cx,part.cy,part.rx,part.ry,'FD');
+    });
+  }
+
+  // Disegna figura anatomica (contorni)
+  doc.setDrawColor(...blue); doc.setLineWidth(0.5);
+  doc.setFillColor(240,245,252);
+  // Testa
+  if(!bodyParts.has('Testa')) doc.circle(figX,figY+4*s,3.5*s,'FD');
+  else doc.circle(figX,figY+4*s,3.5*s,'S');
+  // Collo
+  doc.setDrawColor(...blue);
+  doc.line(figX-1.5*s,figY+7.5*s,figX-1.5*s,figY+10*s);
+  doc.line(figX+1.5*s,figY+7.5*s,figX+1.5*s,figY+10*s);
+  // Spalle
+  doc.line(figX-1.5*s,figY+10*s,figX-7*s,figY+10*s);
+  doc.line(figX+1.5*s,figY+10*s,figX+7*s,figY+10*s);
+  // Torso
+  if(!bodyParts.has('Torso')&&!bodyParts.has('Addome')){
+    doc.rect(figX-6*s,figY+10*s,12*s,15*s,'FD');
+  } else {
+    doc.rect(figX-6*s,figY+10*s,12*s,15*s,'S');
+  }
+  // Bacino
+  doc.line(figX-6*s,figY+25*s,figX-3*s,figY+27*s);
+  doc.line(figX+6*s,figY+25*s,figX+3*s,figY+27*s);
+  // Braccio SX
+  if(!bodyParts.has('Braccio sinistro')){doc.setFillColor(240,245,252);}
+  doc.rect(figX-11*s,figY+10*s,4*s,11*s,'S');
+  // Braccio DX
+  doc.rect(figX+7*s,figY+10*s,4*s,11*s,'S');
+  // Mano SX
+  if(!bodyParts.has('Mano sinistra')){doc.setFillColor(240,245,252);}
+  doc.ellipse(figX-9*s,figY+23*s,2.5*s,2*s,'S');
+  // Mano DX
+  doc.ellipse(figX+9*s,figY+23*s,2.5*s,2*s,'S');
+  // Gamba SX
+  doc.rect(figX-6*s,figY+27*s,5*s,12*s,'S');
+  // Gamba DX
+  doc.rect(figX+1*s,figY+27*s,5*s,12*s,'S');
+  // Piede SX
+  doc.ellipse(figX-3.5*s,figY+40*s,3.5*s,2*s,'S');
+  // Piede DX
+  doc.ellipse(figX+3.5*s,figY+40*s,3.5*s,2*s,'S');
+  // Capelli stilizzati
+  doc.setLineWidth(0.3);
+  doc.line(figX-2*s,figY+0.5*s,figX-3.2*s,figY-0.5*s);
+  doc.line(figX,figY+0.3*s,figX,figY-0.8*s);
+  doc.line(figX+2*s,figY+0.5*s,figX+3.2*s,figY-0.5*s);
+  doc.setLineWidth(LW);
+  
+  // Lista parti lesionate sotto il corpo
+  if(bodyParts.size>0){
+    doc.setFillColor(254,235,232); doc.setDrawColor(220,50,50); doc.setLineWidth(0.3);
+    let partY=figY+44*s;
+    [...bodyParts].slice(0,5).forEach(p=>{
+      doc.rect(bodyX+1,partY-3,bodyW-2,4,'FD');
+      doc.setTextColor(180,20,20); doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.text('▶ '+p,bodyX+3,partY);
       partY+=4.5;
     });
+    doc.setLineWidth(LW);
   }
   y+=secH+3;
   // ── Contesto (checkboxes Si/No) ──
@@ -1198,13 +1278,14 @@ function generatePDF(){
   // Procedure rispettate
   const procRispEl=document.querySelector('[name="proc_risp"].selected');
   const procRispVal=procRispEl?procRispEl.querySelector('span').textContent:'';
-  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,7,'S');
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,8,'S');
   doc.setTextColor(...dark); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
-  doc.text('Le procedure di lavoro sono state rispettate:',margin+2,y+5);
-  const isSiProc=procRispVal==='Sì'||procRispVal==='Yes'||procRispVal==='Oui'||procRispVal==='Ja';
-  checkbox(margin+100,y+1,isSiProc,'Sì');
-  checkbox(margin+115,y+1,!isSiProc&&!!procRispVal,'No');
-  y+=9;
+  doc.text('Le procedure di lavoro sono state rispettate:',margin+2,y+5.5);
+  const isSiProc=!!procRispVal&&!['No','Nein','Non'].includes(procRispVal);
+  const isNoProc=['No','Nein','Non'].includes(procRispVal);
+  checkbox(margin+contentW-28,y+2,isSiProc,'Si');
+  checkbox(margin+contentW-14,y+2,isNoProc,'No');
+  y+=10;
 
   // Cause checkboxes su griglia 2 colonne
   const causeList=[...document.querySelectorAll('.cause-item')].map(c=>({
@@ -1252,15 +1333,20 @@ function generatePDF(){
   // DVR / Piano emergenza
   const dvrEl=document.querySelector('[name="dvr_agg"].selected');
   const peEl=document.querySelector('[name="pe_agg"].selected');
-  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,8,'S');
+  // DVR e PE su due righe separate per evitare overflow
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,7,'S');
   doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
-  doc.text('Aggiornamento Valutazione dei Rischi:',margin+2,y+5.5);
-  const dvrSi=dvrEl&&(dvrEl.querySelector('span').textContent==='Sì'||dvrEl.querySelector('span').textContent==='Yes');
-  checkbox(margin+82,y+2,dvrSi,'Sì'); checkbox(margin+93,y+2,dvrEl&&!dvrSi,'No');
-  doc.text('Aggiornamento Piano di emergenza:',margin+105,y+5.5);
-  const peSi=peEl&&(peEl.querySelector('span').textContent==='Sì'||peEl.querySelector('span').textContent==='Yes');
-  checkbox(margin+178,y+2,peSi,'Sì'); checkbox(margin+188,y+2,peEl&&!peSi,'No');
-  y+=10;
+  const dvrSi=dvrEl&&(dvrEl.querySelector('span').textContent==='Sì'||dvrEl.querySelector('span').textContent==='Yes'||dvrEl.querySelector('span').textContent==='Ja');
+  doc.text('Aggiornamento Valutazione dei Rischi (DVR):',margin+2,y+5);
+  checkbox(margin+contentW-24,y+1.5,dvrSi,'Si');
+  checkbox(margin+contentW-11,y+1.5,dvrEl&&!dvrSi,'No');
+  y+=7;
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,7,'S');
+  const peSi=peEl&&(peEl.querySelector('span').textContent==='Sì'||peEl.querySelector('span').textContent==='Yes'||peEl.querySelector('span').textContent==='Ja');
+  doc.text('Aggiornamento Piano di emergenza ed evacuazione:',margin+2,y+5);
+  checkbox(margin+contentW-24,y+1.5,peSi,'Si');
+  checkbox(margin+contentW-11,y+1.5,peEl&&!peSi,'No');
+  y+=9;
 
   // ── SEZIONE 8: RESPONSABILI + FIRME ──
   checkY(70);
@@ -1330,22 +1416,22 @@ function generatePDF(){
 function drawSignatureSection(doc,y,contentW,margin,white,blue,mid,borderGray){
   const LW=0.25;
   const halfW=(contentW-4)/2;
+  const sigBoxH=22;
   doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
-  // Labels
   doc.setTextColor(...blue); doc.setFontSize(8); doc.setFont('helvetica','bold');
   doc.text('FIRMA COMPILATORE',margin,y+5);
   doc.text('FIRMA RSPP / RESPONSABLE HSE',margin+halfW+4,y+5);
   y+=7;
-  // Boxes
-  doc.setDrawColor(...borderGray); doc.rect(margin,y,halfW,26,'S');
-  doc.rect(margin+halfW+4,y,halfW,26,'S');
+  doc.setFillColor(...white); doc.setDrawColor(...borderGray);
+  doc.rect(margin,y,halfW,sigBoxH,'FD');
+  doc.rect(margin+halfW+4,y,halfW,sigBoxH,'FD');
   const canvas=document.getElementById('firma-canvas');
   const canvasRSPP=document.getElementById('firma-rspp-canvas');
   function isFE(id){const c=document.getElementById(id);return!c.getContext('2d').getImageData(0,0,c.width,c.height).data.some(v=>v!==0);}
-  if(!isFE('firma-canvas')){doc.addImage(canvas.toDataURL('image/png'),'PNG',margin+1,y+1,halfW-2,24);}
-  else{doc.setTextColor(180,180,180);doc.setFontSize(9);doc.setFont('helvetica','italic');doc.text('(non firmato)',margin+halfW/2,y+14,{align:'center'});}
-  if(!isFE('firma-rspp-canvas')){doc.addImage(canvasRSPP.toDataURL('image/png'),'PNG',margin+halfW+5,y+1,halfW-2,24);}
-  else{doc.setTextColor(180,180,180);doc.setFontSize(9);doc.setFont('helvetica','italic');doc.text('(da completare)',margin+halfW+4+halfW/2,y+14,{align:'center'});}
+  if(!isFE('firma-canvas')){doc.addImage(canvas.toDataURL('image/png'),'PNG',margin+1,y+1,halfW-2,sigBoxH-2);}
+  else{doc.setTextColor(180,180,180);doc.setFontSize(9);doc.setFont('helvetica','italic');doc.text('(non firmato)',margin+halfW/2,y+sigBoxH/2+1,{align:'center'});}
+  if(!isFE('firma-rspp-canvas')){doc.addImage(canvasRSPP.toDataURL('image/png'),'PNG',margin+halfW+5,y+1,halfW-2,sigBoxH-2);}
+  else{doc.setTextColor(180,180,180);doc.setFontSize(9);doc.setFont('helvetica','italic');doc.text('(da completare)',margin+halfW+4+halfW/2,y+sigBoxH/2+1,{align:'center'});}
 }
 
 function finalizePDF(doc,proto){
