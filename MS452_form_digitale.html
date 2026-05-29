@@ -893,26 +893,20 @@ function generatePDF(){
 
   // Checkbox disegnata a mano
   const checkbox=(x,cy,checked,label,color)=>{
-    const bx=x, by=cy-3.2, bs=3.8;
-    // Draw box
-    doc.setFillColor(255,255,255);
-    doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
-    doc.rect(bx,by,bs,bs,'FD');
+    // Box bordo
+    doc.setDrawColor(...borderGray); doc.setFillColor(255,255,255); doc.setLineWidth(LW);
+    doc.rect(x,cy-3.5,4,4,'FD');
     if(checked){
-      // Filled colored box
+      // X mark as two text characters — universally supported
       doc.setFillColor(...(color||blue));
-      doc.rect(bx,by,bs,bs,'F');
-      // White checkmark: two filled rectangles forming a check shape
-      doc.setFillColor(255,255,255);
-      // Left short stroke of checkmark
-      doc.rect(bx+0.5,by+bs*0.55,1.1,0.7,'F');
-      // Right long stroke of checkmark  
-      doc.rect(bx+1.2,by+0.4,0.7,bs*0.65,'F');
+      doc.rect(x,cy-3.5,4,4,'F');
+      doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.text('v',x+0.5,cy-0.2);
     }
     doc.setLineWidth(LW);
     if(label){
       doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
-      doc.text(label,bx+5.5,cy);
+      doc.text(label,x+5.5,cy);
     }
   };
 
@@ -1228,14 +1222,22 @@ function generatePDF(){
   let sinoX=margin+2, sinoY=y+4;
   siNoItems.forEach((item,i)=>{
     if(i===3){sinoX=margin+contentW/2+2; sinoY=y+5;}
-    const selEl=document.querySelector('[name="'+item.name+'"].selected');
-    const selVal=selEl?selEl.querySelector('span').textContent.trim():'';
+    // Read all sino-items for this radio group
+    const allItems=document.querySelectorAll('.sino-item[onclick]');
+    let sinoSelVal='';
+    allItems.forEach(el=>{
+      const inp=el.querySelector('input[name="'+item.name+'"]');
+      if(inp && el.classList.contains('selected')){
+        const spans=el.querySelectorAll('span');
+        spans.forEach(sp=>{ if(sp.textContent.trim()&&sp.textContent.trim().length<10) sinoSelVal=sp.textContent.trim(); });
+      }
+    });
     doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','bold');
     doc.text(item.label,sinoX,sinoY);
-    const isSi=!!selVal&&!['No','Nein','Non'].includes(selVal);
-    const isNo=['No','Nein','Non'].includes(selVal);
-    checkbox(sinoX+52,sinoY,isSi,t('si'));
-    checkbox(sinoX+62,sinoY,isNo,t('no'));
+    const isSi=['Si','Sì','Yes','Oui','Ja'].some(v=>sinoSelVal.includes(v));
+    const isNo=['No','Nein','Non'].some(v=>sinoSelVal===v);
+    checkbox(sinoX+52,sinoY+0.5,isSi,t('si'));
+    checkbox(sinoX+63,sinoY+0.5,isNo,t('no'));
     sinoY+=7.5;
   });
   y+=30;
@@ -1278,13 +1280,14 @@ function generatePDF(){
   // Procedure rispettate
   const procRispEl=document.querySelector('[name="proc_risp"].selected');
   const procRispVal=procRispEl?procRispEl.querySelector('span').textContent:'';
-  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,8,'S');
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW-24,8,'S');
+  doc.rect(margin+contentW-24,y,24,8,'S');
   doc.setTextColor(...dark); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
   doc.text('Le procedure di lavoro sono state rispettate:',margin+2,y+5.5);
   const isSiProc=!!procRispVal&&!['No','Nein','Non'].includes(procRispVal);
   const isNoProc=['No','Nein','Non'].includes(procRispVal);
-  checkbox(margin+contentW-28,y+2,isSiProc,'Si');
-  checkbox(margin+contentW-14,y+2,isNoProc,'No');
+  checkbox(margin+contentW-22,y+2,isSiProc,'Si');
+  checkbox(margin+contentW-10,y+2,isNoProc,'No');
   y+=10;
 
   // Cause checkboxes su griglia 2 colonne
@@ -1313,9 +1316,10 @@ function generatePDF(){
   doc.setFillColor(...grayBg); doc.rect(margin,y,40,14,'F'); doc.line(margin+40,y,margin+40,y+14);
   doc.setTextColor(...blue); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
   doc.text('NC RILEVATA:',margin+2,y+5);
-  checkbox(margin+2,y+9,!!ncVal,'Sì — Descrizione:',red);
+  checkbox(margin+2,y+9,!!ncVal,'Si - Descrizione:',red);
   doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-  doc.text(ncVal||'Nessuna NC rilevata',margin+42,y+9);
+  if(ncVal) doc.text(ncVal,margin+42,y+9);
+  else { doc.setTextColor(...mid); doc.text('Nessuna',margin+42,y+9); }
   y+=16;
 
   // ── SEZIONE 7: AZIONI CORRETTIVE ──
@@ -1333,19 +1337,25 @@ function generatePDF(){
   // DVR / Piano emergenza
   const dvrEl=document.querySelector('[name="dvr_agg"].selected');
   const peEl=document.querySelector('[name="pe_agg"].selected');
-  // DVR e PE su due righe separate per evitare overflow
-  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,7,'S');
+  // DVR e PE - due righe indipendenti
+  const dvrSi=dvrEl&&['Si','Si','Yes','Ja'].some(v=>dvrEl.querySelector('span').textContent.includes(v));
+  const peSi=peEl&&['Si','Si','Yes','Ja'].some(v=>peEl.querySelector('span').textContent.includes(v));
+  // Riga DVR
+  checkY(8);
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW-30,7,'S');
+  doc.rect(margin+contentW-30,y,30,7,'S');
   doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
-  const dvrSi=dvrEl&&(dvrEl.querySelector('span').textContent==='Sì'||dvrEl.querySelector('span').textContent==='Yes'||dvrEl.querySelector('span').textContent==='Ja');
   doc.text('Aggiornamento Valutazione dei Rischi (DVR):',margin+2,y+5);
-  checkbox(margin+contentW-24,y+1.5,dvrSi,'Si');
-  checkbox(margin+contentW-11,y+1.5,dvrEl&&!dvrSi,'No');
+  checkbox(margin+contentW-26,y+1.5,dvrSi,'Si');
+  checkbox(margin+contentW-14,y+1.5,dvrEl&&!dvrSi,'No');
   y+=7;
-  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,7,'S');
-  const peSi=peEl&&(peEl.querySelector('span').textContent==='Sì'||peEl.querySelector('span').textContent==='Yes'||peEl.querySelector('span').textContent==='Ja');
+  // Riga PE
+  checkY(8);
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW-30,7,'S');
+  doc.rect(margin+contentW-30,y,30,7,'S');
   doc.text('Aggiornamento Piano di emergenza ed evacuazione:',margin+2,y+5);
-  checkbox(margin+contentW-24,y+1.5,peSi,'Si');
-  checkbox(margin+contentW-11,y+1.5,peEl&&!peSi,'No');
+  checkbox(margin+contentW-26,y+1.5,peSi,'Si');
+  checkbox(margin+contentW-14,y+1.5,peEl&&!peSi,'No');
   y+=9;
 
   // ── SEZIONE 8: RESPONSABILI + FIRME ──
@@ -1397,9 +1407,9 @@ function generatePDF(){
     };
     // Carica le foto in modo sincrono tramite Promise.all poi salva
     Promise.all(fotoFiles.slice(0,4).map((f,i)=>loadThumb(f,i))).then(()=>{
-      y+=thumbH+5;
+      y+=thumbH+4;
       // Firme dopo foto
-      const needH=45;
+      const needH=32;
       if(y+needH>284){ doc.addPage(); drawPageHeader(); y=28; }
       drawSignatureSection(doc,y,contentW,margin,white,blue,mid,borderGray);
       finalizePDF(doc,currentProto);
@@ -1408,7 +1418,7 @@ function generatePDF(){
   }
 
   // ── FIRME (se non ci sono foto) ──
-  checkY(45);
+  checkY(35);
   drawSignatureSection(doc,y,contentW,margin,white,blue,mid,borderGray);
   finalizePDF(doc,currentProto);
 }
@@ -1416,7 +1426,7 @@ function generatePDF(){
 function drawSignatureSection(doc,y,contentW,margin,white,blue,mid,borderGray){
   const LW=0.25;
   const halfW=(contentW-4)/2;
-  const sigBoxH=22;
+  const sigBoxH=20;
   doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
   doc.setTextColor(...blue); doc.setFontSize(8); doc.setFont('helvetica','bold');
   doc.text('FIRMA COMPILATORE',margin,y+5);
