@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SOMEC SafeReport — MS452-01</title>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -114,6 +114,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .ticket{font-size:12px;color:var(--gm);margin-top:12px;font-family:monospace;background:var(--gbg);padding:6px 12px;border-radius:var(--r);display:inline-block}
 .btn-pdf{margin-top:12px;background:var(--red);color:#fff;border:none;border-radius:var(--rl);padding:11px 26px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:block;margin-left:auto;margin-right:auto}
 .btn-new{margin-top:10px;background:var(--bl);color:var(--blue);border:1.5px solid var(--bb);border-radius:var(--rl);padding:10px 26px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+/* TOUCH FIX */
+.ev-card,.sino,.cause,.bp,.lang-btn,.cnt-badge,.geo-btn,.btn-add,.ac-del,.btn-sub,.btn-pdf,.btn-new,.part-tag,.foto-th .del{-webkit-tap-highlight-color:rgba(0,0,0,0.1);cursor:pointer;}
+.ev-card,.sino,.cause{-webkit-user-select:none;user-select:none;}
+label.ev-card{display:block;}
+label.sino{display:flex;}
+
 /* RESPONSIVE */
 @media(max-width:580px){
   .c2,.c3{grid-template-columns:1fr}
@@ -206,7 +212,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 <!-- 3 -->
 <div class="sh">⚠️ 3 — <span id="s3">Tipo di evento</span></div>
 <div class="sb">
-  <div class="ev-grid" id="ev-grid">
+  <div class="ev-grid" id="ev-grid" style="touch-action:manipulation">
     <label class="ev-card" onclick="selEv(this,'near-miss')"><input type="radio" name="evento" value="near-miss"><div class="ev-icon">⚠️</div><div class="ev-label" id="e1">Near Miss</div><div class="ev-desc" id="e1d">Successo, nessun ferito</div></label>
     <label class="ev-card" onclick="selEv(this,'pericolosa')"><input type="radio" name="evento" value="pericolosa"><div class="ev-icon">🔍</div><div class="ev-label" id="e2">Situazione pericolosa</div><div class="ev-desc" id="e2d">Rischio potenziale</div></label>
     <label class="ev-card" onclick="selEv(this,'emergenza')"><input type="radio" name="evento" value="emergenza"><div class="ev-icon">🔥</div><div class="ev-label" id="e3">Emergenza</div><div class="ev-desc" id="e3d">Es. incendio</div></label>
@@ -238,12 +244,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   </div>
   <div class="divider"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <div class="fg"><label>Attività ordinaria?</label><div class="sino-g"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="attord">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="attord">✗ No</label><label class="sino na" onclick="pickSino(this)"><input type="radio" name="attord">Saltuaria</label></div></div>
-    <div class="fg"><label>Indossava i DPI?</label><div class="sino-g"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="dpi">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="dpi">✗ No</label><label class="sino na" onclick="pickSino(this)"><input type="radio" name="dpi">N/P</label></div></div>
-    <div class="fg"><label>Formazione svolta?</label><div class="sino-g"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="form">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="form">✗ No</label><label class="sino na" onclick="pickSino(this)"><input type="radio" name="form">In corso</label></div></div>
-    <div class="fg"><label>Attrezzature conformi?</label><div class="sino-g"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="attr">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="attr">✗ No</label><label class="sino na" onclick="pickSino(this)"><input type="radio" name="attr">N/P</label></div></div>
-    <div class="fg"><label>Spazi adeguati?</label><div class="sino-g"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="spazi">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="spazi">✗ No</label><label class="sino na" onclick="pickSino(this)"><input type="radio" name="spazi">Riorg.</label></div></div>
-    <div class="fg"><label>Procedure definite?</label><div class="sino-g"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="proc">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="proc">✗ No</label><label class="sino na" onclick="pickSino(this)"><input type="radio" name="proc">Cambio</label></div></div>
+    <div class="fg"><label>Attività ordinaria?</label><div class="sino-g" style="touch-action:manipulation"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="attord">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="attord">✗ No</label><label class="sino na" onclick="pickSino(this)"><input type="radio" name="attord">Saltuaria</label></div></div>
+    <div class="fg"><label>Indossava i DPI?</label><div class="sino-g" style="touch-action:manipulation"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="dpi">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="dpi">✗ No</label><label class="sino na" onclick="pickSino(this)"><input type="radio" name="dpi">N/P</label></div></div>
+    <div class="fg"><label>Formazione svolta?</label><div class="sino-g" style="touch-action:manipulation"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="form">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="form">✗ No</label><label class="sino na" onclick="pickSino(this)"><input type="radio" name="form">In corso</label></div></div>
+    <div class="fg"><label>Attrezzature conformi?</label><div class="sino-g" style="touch-action:manipulation"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="attr">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="attr">✗ No</label><label class="sino na" onclick="pickSino(this)"><input type="radio" name="attr">N/P</label></div></div>
+    <div class="fg"><label>Spazi adeguati?</label><div class="sino-g" style="touch-action:manipulation"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="spazi">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="spazi">✗ No</label><label class="sino na" onclick="pickSino(this)"><input type="radio" name="spazi">Riorg.</label></div></div>
+    <div class="fg"><label>Procedure definite?</label><div class="sino-g" style="touch-action:manipulation"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="proc">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="proc">✗ No</label><label class="sino na" onclick="pickSino(this)"><input type="radio" name="proc">Cambio</label></div></div>
   </div>
 </div>
 
@@ -305,11 +311,11 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 <div class="sb">
   <div class="fg" style="margin-bottom:12px">
     <label id="s-proc">Procedure rispettate?</label>
-    <div class="sino-g"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="proc_risp">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="proc_risp">✗ No</label></div>
+    <div class="sino-g" style="touch-action:manipulation"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="proc_risp">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="proc_risp">✗ No</label></div>
   </div>
   <div class="fg" style="margin-bottom:12px">
     <label id="s-cause">Cause principali</label>
-    <div class="cause-g">
+    <div class="cause-g" style="touch-action:manipulation">
       <div class="cause" onclick="togCause(this)"><div class="chk"></div><span id="c1">Comportamento scorretto</span></div>
       <div class="cause" onclick="togCause(this)"><div class="chk"></div><span id="c2">Mancato utilizzo DPI</span></div>
       <div class="cause" onclick="togCause(this)"><div class="chk"></div><span id="c3">Procedura non seguita</span></div>
@@ -334,8 +340,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <button type="button" class="btn-add" onclick="addAC()">+ <span id="s-addac">Aggiungi azione correttiva</span></button>
   <div class="divider"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
-    <div class="fg"><label id="s-dvr">Aggiornamento DVR?</label><div class="sino-g"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="dvr">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="dvr">✗ No</label></div></div>
-    <div class="fg"><label id="s-pe">Aggiorn. piano emergenza?</label><div class="sino-g"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="pe">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="pe">✗ No</label></div></div>
+    <div class="fg"><label id="s-dvr">Aggiornamento DVR?</label><div class="sino-g" style="touch-action:manipulation"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="dvr">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="dvr">✗ No</label></div></div>
+    <div class="fg"><label id="s-pe">Aggiorn. piano emergenza?</label><div class="sino-g" style="touch-action:manipulation"><label class="sino si" onclick="pickSino(this)"><input type="radio" name="pe">✓ Sì</label><label class="sino no" onclick="pickSino(this)"><input type="radio" name="pe">✗ No</label></div></div>
   </div>
 </div>
 
@@ -423,6 +429,30 @@ function updProg(){
 document.querySelectorAll('input,select,textarea').forEach(e=>e.addEventListener('input',updProg));
 
 // ── EVENT CARDS ───────────────────────────────────────────────────────
+// iOS Safari touch fix for interactive elements
+document.addEventListener('DOMContentLoaded', function(){
+  // Add touchend as fallback for click on iOS
+  document.querySelectorAll('.ev-card').forEach(function(el){
+    el.addEventListener('touchend', function(e){
+      e.preventDefault();
+      const type = el.querySelector('input[type=radio]').value;
+      selEv(el, type);
+    });
+  });
+  document.querySelectorAll('.sino').forEach(function(el){
+    el.addEventListener('touchend', function(e){
+      e.preventDefault();
+      pickSino(el);
+    });
+  });
+  document.querySelectorAll('.cause').forEach(function(el){
+    el.addEventListener('touchend', function(e){
+      e.preventDefault();
+      togCause(el);
+    });
+  });
+});
+
 function selEv(card,type){
   document.querySelectorAll('.ev-card').forEach(c=>c.classList.remove('on'));
   card.classList.add('on');
