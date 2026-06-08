@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MS452-01 — Rilevazione Incidenti | Somec Navale</title>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
   // Inizializzazione EmailJS — verrà completata con la tua Public Key
   document.addEventListener('DOMContentLoaded', function() {
@@ -1068,6 +1069,10 @@
     <p>Il modulo è stato trasmesso all'RSPP Somec.</p>
     <p>Verrai ricontattato per eventuale follow-up.</p>
     <div class="ticket" id="ticket-num">Protocollo: —</div>
+  <br>
+  <button id="btn-pdf" onclick="generatePDF()" style="margin-top:10px;background:#d04a1a;color:white;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:block;margin-left:auto;margin-right:auto">
+    📄 Scarica PDF riepilogo
+  </button>
     <br>
     <button class="btn-new" onclick="resetForm()">Nuova segnalazione</button>
   </div>
@@ -1508,6 +1513,434 @@ window.addEventListener('resize', ()=>{
     if(c){ const img=c.toDataURL(); c.width=c.offsetWidth||400; const ctx=c.getContext('2d'); const i=new Image(); i.onload=()=>ctx.drawImage(i,0,0); i.src=img; }
   });
 });
+
+// ── PDF GENERATION ────────────────────────────────────────────────────
+function generatePDF(){
+  const btn = document.getElementById('btn-pdf');
+  if(!window.jspdf){ btn.textContent='⏳...'; setTimeout(generatePDF,800); return; }
+  btn.textContent='⏳ Generazione...'; btn.disabled=true;
+
+  try {
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const W=210, M=12, CW=W-2*M;
+    const BLUE=[26,74,122], WHITE=[255,255,255], GRAY=[245,246,248],
+          DARK=[26,30,40], MID=[74,80,96], LGRAY=[180,185,192], RED=[192,57,43];
+    let y=0;
+
+    // ── Helpers ──────────────────────────────────────────────────────
+    const LW=0.25;
+    const newPage=()=>{ doc.addPage(); pageHeader(); y=28; };
+    const chk=(needed)=>{ if(y+needed>282) newPage(); };
+
+    function pageHeader(){
+      doc.setDrawColor(...LGRAY); doc.setLineWidth(LW);
+      doc.rect(M,8,CW,14,'S');
+      doc.setFillColor(255,255,255); doc.rect(M,8,38,14,'F');
+      try{ doc.addImage(document.querySelector('.header-logo img').src,'PNG',M+1,9,34,11); }catch(e){}
+      doc.line(M+38,8,M+38,22);
+      doc.setTextColor(...DARK); doc.setFontSize(11); doc.setFont('helvetica','bold');
+      doc.text('MODULO SICUREZZA',M+80,14,{align:'center'});
+      doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(...MID);
+      doc.text('Rilevazione e Analisi Incidenti',M+80,19,{align:'center'});
+      doc.line(M+38+CW*0.55,8,M+38+CW*0.55,22);
+      doc.setFontSize(7); doc.text('N. Documento',M+38+CW*0.55+2,12);
+      doc.setFontSize(9); doc.setTextColor(...BLUE); doc.setFont('helvetica','bold');
+      doc.text('MS452-01',M+38+CW*0.55+2,17);
+      doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...MID);
+      doc.text('Rev.02 — '+new Date().toLocaleDateString('it-IT'),M+38+CW*0.55+2,21);
+    }
+
+    function secHeader(title,sy){
+      doc.setFillColor(...BLUE); doc.rect(M,sy,CW,6,'F');
+      doc.setTextColor(...WHITE); doc.setFontSize(8); doc.setFont('helvetica','bold');
+      doc.text(title.toUpperCase(),M+2,sy+4.5);
+      return sy+6;
+    }
+
+    function row(label,value,ry,h){
+      h=h||7;
+      doc.setDrawColor(...LGRAY); doc.setLineWidth(LW); doc.rect(M,ry,CW,h,'S');
+      doc.setFillColor(...GRAY); doc.rect(M,ry,52,h,'F');
+      doc.line(M+52,ry,M+52,ry+h);
+      doc.setTextColor(...BLUE); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+      doc.text(label.toUpperCase()+':',M+1,ry+h/2+1.5);
+      doc.setTextColor(...DARK); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      const lines=doc.splitTextToSize(String(value||'—'),CW-55);
+      doc.text(lines,M+54,ry+h/2-((lines.length-1)*2.5)+1.5);
+      return ry+h;
+    }
+
+    function chkbox(x,cy,checked,label,color){
+      doc.setFillColor(255,255,255); doc.setDrawColor(...LGRAY); doc.setLineWidth(LW);
+      doc.rect(x,cy-3.5,4.5,4.5,'FD');
+      if(checked){
+        doc.setFillColor(...(color||BLUE)); doc.rect(x,cy-3.5,4.5,4.5,'F');
+        doc.setDrawColor(255,255,255); doc.setLineWidth(1.0);
+        doc.line(x+0.8,cy-1.2,x+1.8,cy-0.2);
+        doc.line(x+1.8,cy-0.2,x+3.8,cy-3.0);
+        doc.setLineWidth(LW); doc.setDrawColor(...LGRAY);
+      }
+      if(label){
+        doc.setTextColor(...DARK); doc.setFontSize(8); doc.setFont('helvetica','normal');
+        doc.text(label,x+6,cy);
+      }
+    }
+
+    // ── PAGE 1 ────────────────────────────────────────────────────────
+    pageHeader(); y=25;
+
+    // Protocollo
+    doc.setFillColor(232,240,250); doc.setDrawColor(...BLUE); doc.setLineWidth(0.4);
+    doc.rect(M,y,CW,8,'FD');
+    doc.setTextColor(...BLUE); doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text('Protocollo: '+currentProto,M+2,y+6);
+    doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(...MID);
+    doc.text(new Date().toLocaleString('it-IT'),W-M,y+6,{align:'right'});
+    doc.setLineWidth(LW); y+=9;
+
+    // Tipo evento
+    const evEl=document.querySelector('.event-card.selected .ev-label');
+    const evText=evEl?evEl.textContent.trim().toUpperCase():'—';
+    const isInf=evText.match(/INFORT|ACCIDENT|UNFALL/);
+    doc.setFillColor(...(isInf?RED:BLUE)); doc.rect(M,y,CW,7,'F');
+    doc.setTextColor(...WHITE); doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text('TIPO EVENTO: '+evText,W/2,y+5.5,{align:'center'});
+    y+=9;
+
+    // SEZ 1
+    y=secHeader('1 — Data, Ora e Luogo',y)+1;
+    const c2=CW/2-1;
+    doc.setDrawColor(...LGRAY); doc.setLineWidth(LW); doc.rect(M,y,c2,7,'S');
+    doc.setFillColor(...GRAY); doc.rect(M,y,22,7,'F'); doc.line(M+22,y,M+22,y+7);
+    doc.setTextColor(...BLUE); doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.text('DATA:',M+1,y+5);
+    doc.setTextColor(...DARK); doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(document.getElementById('data').value||'—',M+24,y+5);
+    doc.rect(M+c2+2,y,c2,7,'S');
+    doc.setFillColor(...GRAY); doc.rect(M+c2+2,y,18,7,'F'); doc.line(M+c2+2+18,y,M+c2+2+18,y+7);
+    doc.setTextColor(...BLUE); doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.text('ORA:',M+c2+3,y+5);
+    doc.setTextColor(...DARK); doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(document.getElementById('ora').value||'—',M+c2+21,y+5);
+    y+=7;
+    y=row('Cantiere / Sito',document.getElementById('cantiere').value,y)+0;
+    y=row('Area / Reparto',document.getElementById('area').value,y)+0;
+    const mac=document.getElementById('macchina').value; if(mac) y=row('Macchina / Attr.',mac,y)+0;
+    const lat=document.getElementById('geo-lat').value, lng=document.getElementById('geo-lng').value, acc=document.getElementById('geo-acc').value;
+    if(lat) y=row('GPS',lat+', '+lng+(acc?' (±'+acc+'m)':''),y)+0;
+    y+=3;
+
+    // SEZ 2
+    chk(20); y=secHeader('2 — Persona Coinvolta',y)+1;
+    const c3=CW/3;
+    doc.setDrawColor(...LGRAY); doc.rect(M,y,CW,7,'S');
+    doc.setFillColor(...GRAY); doc.rect(M,y,20,7,'F'); doc.line(M+20,y,M+20,y+7);
+    doc.rect(M+c3,y,0,7,'S'); doc.line(M+c3,y,M+c3,y+7);
+    doc.setFillColor(...GRAY); doc.rect(M+c3,y,22,7,'F'); doc.line(M+c3+22,y,M+c3+22,y+7);
+    doc.line(M+c3*2,y,M+c3*2,y+7);
+    doc.setFillColor(...GRAY); doc.rect(M+c3*2,y,20,7,'F'); doc.line(M+c3*2+20,y,M+c3*2+20,y+7);
+    doc.setTextColor(...BLUE); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text('AZIENDA:',M+1,y+5); doc.text('COGNOME:',M+c3+1,y+5); doc.text('NOME:',M+c3*2+1,y+5);
+    doc.setTextColor(...DARK); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    doc.text(document.getElementById('azienda').value||'—',M+22,y+5);
+    doc.text(document.getElementById('cognome').value||'—',M+c3+24,y+5);
+    doc.text(document.getElementById('nome').value||'—',M+c3*2+22,y+5);
+    y+=7;
+    y=row('Mansione',document.getElementById('mansione').value,y)+0;
+    const alt=document.getElementById('altri').value; if(alt) y=row('Altri presenti',alt,y)+0;
+    y+=3;
+
+    // SEZ 3 — Tipo evento checkboxes
+    chk(42); y=secHeader('3 — Tipo di Evento / Classificazione',y)+2;
+    const eventi3=[
+      {key:'near-miss',label:'MANCATO INFORTUNIO (Near Miss)'},
+      {key:'pericolosa',label:'SITUAZIONE PERICOLOSA (potrebbe succedere qualcosa)'},
+      {key:'emergenza',label:'EMERGENZA (es. principio di incendio)'},
+      {key:'lesione',label:'LESIONE (senza lasciare il lavoro)'},
+      {key:'infortunio',label:'INFORTUNIO (con prognosi / Pronto Soccorso)'}
+    ];
+    const selEv=document.querySelector('input[name="evento"]:checked')?.value||'';
+    eventi3.forEach(ev=>{ chkbox(M+2,y+1,selEv===ev.key,ev.label,(isInf&&ev.key==='infortunio')?RED:BLUE); y+=6; });
+    y+=3;
+
+    // SEZ 4 — Descrizione
+    chk(30); y=secHeader('4 — Descrizione dell'Accaduto',y)+1;
+    const desc=document.getElementById('descrizione').value||'—';
+    const descL=doc.splitTextToSize(desc,CW-4);
+    const descH=Math.max(18,descL.length*4.5+6);
+    doc.setDrawColor(...LGRAY); doc.rect(M,y,CW,descH,'S');
+    doc.setTextColor(...DARK); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text(descL,M+2,y+5);
+    y+=descH+2;
+
+    // Dinamica + Corpo
+    chk(55);
+    const dW=CW*0.57, bX=M+dW+2, bW=CW-dW-2;
+    const selDin=document.getElementById('dinamica').value;
+    const dinDet=document.getElementById('dinamica_det').value;
+    const dinList=[
+      "Caduto da (caduta dall'alto)","Caduto in piano","Ha urtato contro","Urtato da",
+      "Schiacciato da","Investito da","Impigliato / agganciato","A contatto con",
+      "Ha inalato","Ha ingerito","Esposto a agente fisico","Ha messo un piede in fallo",
+      "Movimento scoordinato","Ha fatto uno sforzo"
+    ];
+    const dinRows=Math.ceil(dinList.length/2);
+    const dinH=Math.max(dinRows*6+10,55);
+    doc.setFillColor(...BLUE); doc.rect(M,y,dW,6,'F');
+    doc.setFillColor(...BLUE); doc.rect(bX,y,bW,6,'F');
+    doc.setTextColor(...WHITE); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text("COSA E' SUCCESSO? (DINAMICA)",M+2,y+4.5);
+    doc.text("DOVE SI E' FATTO MALE?",bX+2,y+4.5);
+    y+=6;
+    doc.setDrawColor(...LGRAY); doc.rect(M,y,dW,dinH,'S'); doc.rect(bX,y,bW,dinH,'S');
+    const dHalf=dW/2;
+    dinList.forEach((d,i)=>{
+      const col=i<7?0:1, row2=i<7?i:i-7;
+      const cx=M+2+col*dHalf, cy=y+5+row2*6;
+      const matched=selDin&&(selDin===d||selDin.split(' ').slice(0,2).join(' ')===d.split(' ').slice(0,2).join(' '));
+      chkbox(cx,cy,matched,d);
+    });
+    if(dinDet){ doc.setTextColor(...MID); doc.setFontSize(7.5); doc.setFont('helvetica','italic'); doc.text('Spec: '+dinDet,M+2,y+dinH-2); }
+    // Corpo stilizzato
+    const fx=bX+bW/2, fy=y+3;
+    doc.setDrawColor(...LGRAY); doc.setLineWidth(0.5);
+    const parts=[...bodyParts];
+    function isAffected(name){ return parts.some(p=>p.toLowerCase().includes(name)); }
+    // Draw body parts - affected ones in red
+    function drawPart(shape,args,name){
+      const aff=isAffected(name);
+      doc.setFillColor(...(aff?[220,50,50]:[240,245,252]));
+      doc.setDrawColor(...(aff?[180,20,20]:LGRAY));
+      if(shape==='circle') doc.circle(...args,'FD');
+      else if(shape==='rect') doc.rect(...args,'FD');
+      else if(shape==='ellipse') doc.ellipse(...args,'FD');
+    }
+    const s=0.95;
+    drawPart('circle',[fx,fy+4*s,3.2*s],'testa');
+    doc.line(fx,fy+7.2*s,fx,fy+9.5*s);
+    drawPart('rect',[fx-5.5*s,fy+9.5*s,11*s,13*s],'torso');
+    drawPart('rect',[fx-10*s,fy+9.5*s,4*s,10*s],'braccio sinistro');
+    drawPart('rect',[fx+6*s,fy+9.5*s,4*s,10*s],'braccio destro');
+    drawPart('ellipse',[fx-8*s,fy+21*s,2.5*s,2*s],'mano sinistra');
+    drawPart('ellipse',[fx+8*s,fy+21*s,2.5*s,2*s],'mano destra');
+    drawPart('rect',[fx-6*s,fy+22.5*s,5*s,11*s],'gamba sinistra');
+    drawPart('rect',[fx+1*s,fy+22.5*s,5*s,11*s],'gamba destra');
+    drawPart('ellipse',[fx-3.5*s,fy+35*s,3.5*s,2*s],'piede sinistro');
+    drawPart('ellipse',[fx+3.5*s,fy+35*s,3.5*s,2*s],'piede destro');
+    doc.setLineWidth(LW);
+    if(parts.length>0){
+      doc.setFillColor(254,235,232); doc.setTextColor(180,20,20); doc.setFontSize(7); doc.setFont('helvetica','bold');
+      let py=y+dinH-parts.length*4;
+      py=Math.max(py,y+dinH-20);
+      parts.slice(0,4).forEach(p=>{
+        doc.rect(bX+1,py-3,bW-2,4.5,'F');
+        const cp=p.replace(/[^A-Za-z0-9 ]/g,'');
+        doc.text(cp,bX+2,py);
+        py+=4.5;
+      });
+    }
+    y+=dinH+2;
+
+    // Si/No contesto
+    chk(30);
+    const sinoItems2=[
+      {label:'Attività ordinaria?',name:'attord'},{label:'Indossava i DPI?',name:'dpi_ind'},
+      {label:'Formazione svolta?',name:'form_svolta'},{label:'Attrezzature conformi?',name:'attr_conf'},
+      {label:'Spazi adeguati?',name:'spazi'},{label:'Procedure definite?',name:'proc_def'}
+    ];
+    doc.setDrawColor(...LGRAY); doc.rect(M,y,CW,28,'S');
+    let sx=M+2, sy2=y+5;
+    sinoItems2.forEach((item,i)=>{
+      if(i===3){sx=M+CW/2+2; sy2=y+5;}
+      const sel=document.querySelector('.sino-item[onclick*="'+item.name+'"].selected, [name="'+item.name+'"]');
+      // Find selected sino item
+      const allSino=document.querySelectorAll('.sino-item');
+      let selVal='';
+      allSino.forEach(el=>{
+        const inp=el.querySelector('input[name="'+item.name+'"]');
+        if(inp&&el.classList.contains('selected')){
+          const sp=el.querySelector('span'); if(sp) selVal=sp.textContent.trim();
+        }
+      });
+      const isSi=['Si','Sì','Yes','Oui','Ja'].some(v=>selVal.includes(v));
+      const isNo=['No','Nein','Non'].some(v=>selVal===v);
+      doc.setTextColor(...DARK); doc.setFontSize(8); doc.setFont('helvetica','bold');
+      doc.text(item.label,sx,sy2);
+      chkbox(sx+55,sy2,isSi,'Si');
+      chkbox(sx+67,sy2,isNo,'No');
+      sy2+=7.5;
+    });
+    y+=30;
+
+    // ── PAGE 2 ────────────────────────────────────────────────────────
+    newPage();
+
+    // SEZ 5 — Trattamento
+    y=secHeader('5 — Trattamento Immediato',y)+1;
+    const tratt=document.getElementById('trattamento').value||'—';
+    const trattL=doc.splitTextToSize(tratt,CW-4);
+    const trattH=Math.max(14,trattL.length*4.5+4);
+    doc.setDrawColor(...LGRAY); doc.rect(M,y,CW,trattH,'S');
+    doc.setTextColor(...DARK); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text(trattL,M+2,y+5);
+    y+=trattH+2;
+    const den=document.getElementById('denuncia_num').value;
+    const prog=document.getElementById('prognosi').value;
+    if(den||prog){
+      doc.setFillColor(254,235,232); doc.setDrawColor(...RED); doc.setLineWidth(0.4);
+      doc.rect(M,y,CW,8,'FD'); doc.setLineWidth(LW);
+      doc.setTextColor(...RED); doc.setFontSize(8); doc.setFont('helvetica','bold');
+      doc.text('INFORTUNIO',M+2,y+5.5);
+      doc.setTextColor(...DARK); doc.setFont('helvetica','normal');
+      doc.text('N° denuncia: '+(den||'—'),M+35,y+5.5);
+      doc.text('Prognosi: '+(prog||'—')+' gg',M+120,y+5.5);
+      y+=10;
+    }
+    y+=2;
+
+    // SEZ 6 — Cause
+    chk(55); y=secHeader('6 — Analisi delle Cause',y)+1;
+    const procEl=document.querySelector('[name="proc_risp"].selected');
+    const procVal=procEl?procEl.querySelector('span').textContent.trim():'';
+    const isSiP=!!procVal&&!['No','Nein','Non'].includes(procVal);
+    const isNoP=['No','Nein','Non'].includes(procVal);
+    doc.setDrawColor(...LGRAY); doc.rect(M,y,CW,8,'S');
+    doc.setTextColor(...DARK); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    doc.text('Le procedure di lavoro sono state rispettate:',M+2,y+5.5);
+    chkbox(M+CW-26,y+2,isSiP,'Si');
+    chkbox(M+CW-14,y+2,isNoP,'No');
+    y+=10;
+    const causeItems=[...document.querySelectorAll('.cause-item')].map(c=>({
+      label:c.querySelector('span').textContent.trim(), checked:c.classList.contains('selected')
+    }));
+    const cColW=CW/2, cRows=Math.ceil(causeItems.length/2);
+    const cH=cRows*6+4;
+    doc.setDrawColor(...LGRAY); doc.rect(M,y,CW,cH,'S');
+    doc.setTextColor(...BLUE); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text('CAUSE PRINCIPALI RILEVATE:',M+2,y+4);
+    let cX2=M+2, cY2=y+8;
+    causeItems.forEach((c,i)=>{
+      if(i===Math.ceil(causeItems.length/2)){cX2=M+cColW+2; cY2=y+8;}
+      chkbox(cX2,cY2,c.checked,c.label,RED);
+      cY2+=6;
+    });
+    y+=cH+2;
+    const ncVal=document.getElementById('nc_desc').value;
+    doc.setDrawColor(...LGRAY); doc.rect(M,y,CW,12,'S');
+    doc.setFillColor(...GRAY); doc.rect(M,y,38,12,'F'); doc.line(M+38,y,M+38,y+12);
+    doc.setTextColor(...BLUE); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text('NC RILEVATA:',M+1,y+5);
+    chkbox(M+2,y+7,!!ncVal,'Si - Descrizione:',RED);
+    doc.setTextColor(...DARK); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    doc.text(ncVal||'—',M+40,y+7);
+    y+=14;
+
+    // SEZ 7 — Azioni
+    chk(25); y=secHeader('7 — Azioni da Intraprendere',y)+1;
+    const azList=[...document.querySelectorAll('#ac-list textarea')].map((el,i)=>el.value.trim()?(i+1)+'. '+el.value.trim():'').filter(Boolean);
+    const azText=azList.length?azList.join('
+'):'—';
+    const azL=doc.splitTextToSize(azText,CW-4);
+    const azH=Math.max(12,azL.length*4.5+4);
+    doc.setDrawColor(...LGRAY); doc.rect(M,y,CW,azH,'S');
+    doc.setTextColor(...DARK); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text(azL,M+2,y+5);
+    y+=azH+1;
+    const dvrEl=document.querySelector('[name="dvr_agg"].selected');
+    const peEl=document.querySelector('[name="pe_agg"].selected');
+    const dvrSi=!!(dvrEl&&!['No','Nein','Non'].includes((dvrEl.querySelector('span')||{}).textContent||''));
+    const peSi=!!(peEl&&!['No','Nein','Non'].includes((peEl.querySelector('span')||{}).textContent||''));
+    chk(7); doc.setDrawColor(...LGRAY); doc.rect(M,y,CW,7,'S');
+    doc.setTextColor(...DARK); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Aggiornamento Valutazione dei Rischi (DVR):',M+2,y+5);
+    chkbox(M+CW-26,y+1.5,dvrSi,'Si'); chkbox(M+CW-14,y+1.5,dvrEl&&!dvrSi?true:false,'No');
+    y+=7;
+    chk(7); doc.setDrawColor(...LGRAY); doc.rect(M,y,CW,7,'S');
+    doc.text('Aggiornamento Piano di emergenza ed evacuazione:',M+2,y+5);
+    chkbox(M+CW-26,y+1.5,peSi,'Si'); chkbox(M+CW-14,y+1.5,peEl&&!peSi?true:false,'No');
+    y+=9;
+
+    // SEZ 8 — Responsabili
+    chk(30); y=secHeader('8 — Responsabili e Firme',y)+1;
+    const hR=(CW-2)/2;
+    doc.setDrawColor(...LGRAY); doc.rect(M,y,CW,8,'S');
+    doc.setFillColor(...GRAY); doc.rect(M,y,32,8,'F'); doc.line(M+32,y,M+32,y+8);
+    doc.line(M+hR,y,M+hR,y+8);
+    doc.setFillColor(...GRAY); doc.rect(M+hR+2,y,28,8,'F'); doc.line(M+hR+2+28,y,M+hR+2+28,y+8);
+    doc.setTextColor(...BLUE); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text('RESP. REP.:',M+1,y+5.5); doc.text('RLS:',M+hR+3,y+5.5);
+    doc.setTextColor(...DARK); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text(document.getElementById('resp_reparto').value||'—',M+34,y+5.5);
+    doc.text(document.getElementById('rls_nome').value||'—',M+hR+31,y+5.5);
+    y+=8;
+    y=row('Segnalato da',document.getElementById('compilatore').value+' ('+document.getElementById('email').value+')',y)+0;
+    const noteF=document.getElementById('note_finali').value; if(noteF) y=row('Note',noteF,y)+0;
+    y+=3;
+
+    // Foto
+    if(fotoFiles.length>0){
+      chk(42); y=secHeader('FOTO ALLEGATE ('+fotoFiles.length+')',y)+2;
+      const tW=38, tH=30, tG=3;
+      const drawFotos=()=>{
+        return Promise.all(fotoFiles.slice(0,4).map((f,i)=>new Promise(res=>{
+          const r=new FileReader();
+          r.onload=e=>{
+            try{ doc.setDrawColor(...LGRAY); doc.rect(M+(tW+tG)*i,y,tW,tH,'S'); doc.addImage(e.target.result,'JPEG',M+(tW+tG)*i+1,y+1,tW-2,tH-5); doc.setTextColor(...MID); doc.setFontSize(7); doc.text('Foto '+(i+1),M+(tW+tG)*i+tW/2,y+tH-1,{align:'center'}); }catch(e2){}
+            res();
+          };
+          r.readAsDataURL(f);
+        })));
+      };
+      drawFotos().then(()=>{
+        y+=tH+4;
+        drawSignaturesAndSave(doc,y,W,M,CW,WHITE,BLUE,MID,LGRAY,LW,currentProto,btn);
+      });
+      return;
+    }
+
+    drawSignaturesAndSave(doc,y,W,M,CW,WHITE,BLUE,MID,LGRAY,LW,currentProto,btn);
+
+  } catch(err) {
+    console.error('PDF error:',err);
+    btn.textContent='❌ Errore PDF';
+    btn.disabled=false;
+    setTimeout(()=>{ btn.textContent='📄 Scarica PDF riepilogo'; btn.disabled=false; },3000);
+  }
+}
+
+function drawSignaturesAndSave(doc,y,W,M,CW,WHITE,BLUE,MID,LGRAY,LW,proto,btn){
+  const sigH=22, hW=(CW-4)/2;
+  doc.setDrawColor(...LGRAY); doc.setLineWidth(LW);
+  doc.setTextColor(...BLUE); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text('FIRMA COMPILATORE',M,y+5);
+  doc.text('FIRMA RSPP / RESPONSABLE HSE',M+hW+4,y+5);
+  y+=7;
+  doc.setFillColor(...WHITE); doc.rect(M,y,hW,sigH,'FD'); doc.rect(M+hW+4,y,hW,sigH,'FD');
+  function isEmpty(id){ try{ return !document.getElementById(id).getContext('2d').getImageData(0,0,document.getElementById(id).width,document.getElementById(id).height).data.some(v=>v!==0); }catch(e){ return true; } }
+  if(!isEmpty('firma-canvas')) doc.addImage(document.getElementById('firma-canvas').toDataURL(),'PNG',M+1,y+1,hW-2,sigH-2);
+  else { doc.setTextColor(180,180,180); doc.setFontSize(9); doc.text('(non firmato)',M+hW/2,y+sigH/2+1,{align:'center'}); }
+  if(!isEmpty('firma-rspp-canvas')) doc.addImage(document.getElementById('firma-rspp-canvas').toDataURL(),'PNG',M+hW+5,y+1,hW-2,sigH-2);
+  else { doc.setTextColor(180,180,180); doc.setFontSize(9); doc.text('(da completare)',M+hW+4+hW/2,y+sigH/2+1,{align:'center'}); }
+  // Footer su ogni pagina
+  const tot=doc.internal.getNumberOfPages();
+  for(let p=1;p<=tot;p++){
+    doc.setPage(p);
+    doc.setFillColor(...BLUE); doc.rect(0,287,W,10,'F');
+    doc.setTextColor(...WHITE); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+    doc.text('SOMEC SafeReport · MS452-01 · Somec Navale S.p.A. · HSE Department',W/2,293,{align:'center'});
+    doc.text('Pag. '+p+'/'+tot,W-M,293,{align:'right'});
+  }
+  // Save — mobile safe
+  try {
+    const blob=doc.output('blob');
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download='MS452_'+proto+'.pdf'; a.target='_blank';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); },1000);
+  } catch(e) {
+    window.open(doc.output('datauristring'),'_blank');
+  }
+  btn.textContent='📄 Scarica PDF riepilogo'; btn.disabled=false;
+}
+
 </script>
 </body>
 </html>
