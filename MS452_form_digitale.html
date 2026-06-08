@@ -896,7 +896,7 @@ function generatePDF(){
     // Draw white background box with border
     doc.setFillColor(255,255,255);
     doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
-    doc.rect(x,cy-3.5,4,4,'FD');
+    doc.rect(x,cy-3.5,4.5,4.5,'FD');
     if(checked){
       // Filled colored inner square as checkmark indicator
       doc.setFillColor(...(color||blue));
@@ -1061,7 +1061,7 @@ function generatePDF(){
     doc.rect(margin+2,y-2.5,4,4,'FD');
     if(evChecked){
       doc.setFillColor(...evColor);
-      doc.rect(margin+2.8,y-1.7,2.4,2.4,'F');
+      doc.rect(margin+2.5,y-2.2,3.0,3.0,'F');
     }
     doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
     doc.text(ev.label,margin+7.5,y+0.5);
@@ -1118,7 +1118,7 @@ function generatePDF(){
     const dinMatch = selectedDin && (selectedDin === d || selectedDin.includes(d.split(' ')[0]+' '+d.split(' ')[1]));
     doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
     doc.rect(cx,cy-3,4,4,'FD');
-    if(dinMatch){ doc.setFillColor(...blue); doc.rect(cx+0.8,cy-2.2,2.4,2.4,'F'); }
+    if(dinMatch){ doc.setFillColor(...blue); doc.rect(cx+0.5,cy-2.8,3.0,3.0,'F'); }
     doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
     doc.text(d,cx+5.5,cy);
   });
@@ -1213,9 +1213,17 @@ function generatePDF(){
     doc.setFillColor(254,235,232); doc.setDrawColor(220,50,50); doc.setLineWidth(0.3);
     let partY=figY+44*s;
     [...bodyParts].slice(0,5).forEach(p=>{
-      doc.rect(bodyX+1,partY-3,bodyW-2,4,'FD');
-      doc.setTextColor(180,20,20); doc.setFontSize(7); doc.setFont('helvetica','bold');
-      doc.text('▶ '+p,bodyX+3,partY);
+      // Background strip
+      doc.setFillColor(254,235,232);
+      doc.setDrawColor(254,235,232);
+      doc.setLineWidth(LW);
+      doc.rect(bodyX+1,partY-3.5,bodyW-2,5,'F');
+      // Text only — sanitized, no special chars
+      const cleanP=p.replace(/[^A-Za-z0-9 ]/g,'');
+      doc.setTextColor(180,20,20);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica','bold');
+      doc.text(cleanP,bodyX+3,partY);
       partY+=4.5;
     });
     doc.setLineWidth(LW);
@@ -1252,12 +1260,12 @@ function generatePDF(){
     // SI box inline
     doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
     doc.rect(sinoX+52,sinoY-3,4,4,'FD');
-    if(isSi){ doc.setFillColor(...blue); doc.rect(sinoX+52.8,sinoY-2.2,2.4,2.4,'F'); }
+    if(isSi){ doc.setFillColor(...blue); doc.rect(sinoX+52.5,sinoY-2.8,3.0,3.0,'F'); }
     doc.setTextColor(...dark); doc.setFontSize(8); doc.text(t('si'),sinoX+57.5,sinoY);
     // NO box inline
     doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray);
     doc.rect(sinoX+66,sinoY-3,4,4,'FD');
-    if(isNo){ doc.setFillColor(...blue); doc.rect(sinoX+66.8,sinoY-2.2,2.4,2.4,'F'); }
+    if(isNo){ doc.setFillColor(...blue); doc.rect(sinoX+66.5,sinoY-2.8,3.0,3.0,'F'); }
     doc.setTextColor(...dark); doc.text(t('no'),sinoX+71.5,sinoY);
     sinoY+=7.5;
   });
@@ -1310,12 +1318,16 @@ function generatePDF(){
   // SI box
   doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray);
   doc.rect(margin+contentW-28,y+2,4,4,'FD');
-  if(isSiProc){ doc.setFillColor(...blue); doc.rect(margin+contentW-27.2,y+2.8,2.4,2.4,'F'); }
+  if(isSiProc){ doc.setFillColor(...blue); doc.rect(margin+contentW-27.5,y+2.5,3.5,3.5,'F');
+  doc.setFillColor(255,255,255);
+  doc.rect(margin+contentW-26.2,y+3.5,1.8,1.8,'F'); }
   doc.setTextColor(...dark); doc.setFontSize(8); doc.text('Si',margin+contentW-23,y+5.5);
   // NO box
   doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray);
   doc.rect(margin+contentW-15,y+2,4,4,'FD');
-  if(isNoProc){ doc.setFillColor(...blue); doc.rect(margin+contentW-14.2,y+2.8,2.4,2.4,'F'); }
+  if(isNoProc){ doc.setFillColor(...blue); doc.rect(margin+contentW-14.5,y+2.5,3.5,3.5,'F');
+  doc.setFillColor(255,255,255);
+  doc.rect(margin+contentW-13.2,y+3.5,1.8,1.8,'F'); }
   doc.setTextColor(...dark); doc.text('No',margin+contentW-10,y+5.5);
   y+=10;
 
@@ -1336,7 +1348,7 @@ function generatePDF(){
     // Causa inline
     doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
     doc.rect(cX,cY-3,4,4,'FD');
-    if(c.checked){ doc.setFillColor(...red); doc.rect(cX+0.8,cY-2.2,2.4,2.4,'F'); }
+    if(c.checked){ doc.setFillColor(...red); doc.rect(cX+0.5,cY-2.8,3.0,3.0,'F'); }
     doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
     doc.text(c.label,cX+5.5,cY);
     cY+=6;
@@ -1352,7 +1364,7 @@ function generatePDF(){
   doc.text('NC RILEVATA:',margin+2,y+5);
   doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
   doc.rect(margin+2,y+6,4,4,'FD');
-  if(ncVal){ doc.setFillColor(...red); doc.rect(margin+2.8,y+6.8,2.4,2.4,'F'); }
+  if(ncVal){ doc.setFillColor(...red); doc.rect(margin+2.5,y+6.5,3.0,3.0,'F'); }
   doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
   doc.text('Si - Descrizione:',margin+7.5,y+9.5);
   doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
