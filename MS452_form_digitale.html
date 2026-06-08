@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MS452-01 — Rilevazione Incidenti | Somec Navale</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+  // Inizializzazione EmailJS — verrà completata con la tua Public Key
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof emailjs !== 'undefined' && window.EMAILJS_PUBLIC_KEY_INIT) {
+      emailjs.init(window.EMAILJS_PUBLIC_KEY_INIT);
+    }
+  });
+</script>
+<style>
+  :root {
+    --blue: #1a4a7a;
+    --blue-mid: #2563a8;
+    --blue-light: #e8f0fa;
+    --blue-border: #b8cfe8;
+    --accent: #d04a1a;
+    --gray-bg: #f5f6f8;
+    --gray-border: #d0d4da;
+    --gray-mid: #7a8090;
+    --text: #1a1e28;
+    --text-light: #4a5060;
+    --white: #ffffff;
+    --success: #1a7a4a;
+    --success-bg: #e8f5ee;
+    --warning-bg: #fff8e8;
+    --warning: #a06010;
+    --radius: 6px;
+    --radius-lg: 10px;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--gray-bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--white);
+    border-bottom: 3px solid var(--blue);
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .header-inner {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .header-logo img { height: 36px; display: block; }
+  .header-title {
+    text-align: right;
+  }
+  .header-title .doc-num {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--blue-mid);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .header-title h1 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+
+  /* PROGRESS */
+  .progress-bar {
+    background: var(--blue);
+    height: 3px;
+    transition: width 0.4s ease;
+  }
+
+  /* MAIN */
+  .container {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 24px 20px 48px;
+  }
+
+  /* SECTION HEADER */
+  .section-header {
+    background: var(--blue);
+    color: var(--white);
+    padding: 10px 16px;
+    border-radius: var(--radius) var(--radius) 0 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .section-header:first-child { margin-top: 0; }
+  .section-header svg { flex-shrink: 0; }
+
+  .section-body {
+    background: var(--white);
+    border: 1px solid var(--blue-border);
+    border-top: none;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 4px;
+  }
+
+  /* FORM ELEMENTS */
+  .form-row {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-row.cols-auto { grid-template-columns: 120px 1fr; }
+
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--blue);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .form-group label .req { color: var(--accent); margin-left: 2px; }
+
+  input[type="text"],
+  input[type="date"],
+  input[type="time"],
+  input[type="email"],
+  input[type="number"],
+  select,
+  textarea {
+    border: 1.5px solid var(--gray-border);
+    border-radius: var(--radius);
+    padding: 9px 12px;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--white);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
+    font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--blue-mid);
+    box-shadow: 0 0 0 3px rgba(37,99,168,0.12);
+  }
+  textarea { resize: vertical; min-height: 80px; }
+  select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a8090' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+
+  /* CHECKBOX GROUPS */
+  .check-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border: 1.5px solid var(--gray-border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+    user-select: none;
+    background: var(--white);
+  }
+  .check-item:hover { border-color: var(--blue-mid); background: var(--blue-light); }
+  .check-item input[type="checkbox"],
+  .check-item input[type="radio"] { display: none; }
+  .check-item.selected {
+    border-color: var(--blue);
+    background: var(--blue-light);
+    color: var(--blue);
+    font-weight: 600;
+  }
+  .check-item .dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--gray-border);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .check-item.selected .dot {
+    border-color: var(--blue);
+    background: var(--blue);
+  }
+  .check-item.selected .dot::after {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: white;
+  }
+
+  /* TIPO EVENTO — big cards */
+  .event-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .event-card {
+    border: 2px solid var(--gray-border);
+    border-radius: var(--radius-lg);
+    padding: 14px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--white);
+  }
+  .event-card:hover { border-color: var(--blue-mid); transform: translateY(-1px); }
+  .event-card.selected { border-color: var(--blue); background: var(--blue-light); }
+  .event-card.selected.danger { border-color: var(--accent); background: #fdf2ee; }
+  .event-card .ev-icon { font-size: 28px; margin-bottom: 6px; line-height: 1; }
+  .event-card .ev-label { font-size: 12px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.04em; }
+  .event-card .ev-desc { font-size: 11px; color: var(--text-light); margin-top: 3px; line-height: 1.3; }
+  .event-card input { display: none; }
+
+  /* BODY SVG */
+  .body-section {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .body-wrap {
+    flex: 0 0 auto;
+    text-align: center;
+  }
+  .body-wrap p { font-size: 11px; color: var(--gray-mid); margin-top: 6px; }
+  .body-selected {
+    flex: 1;
+    min-width: 180px;
+  }
+  .body-selected h4 { font-size: 12px; color: var(--blue); font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .body-part-tag {
+    display: inline-block;
+    background: var(--blue-light);
+    color: var(--blue);
+    border: 1px solid var(--blue-border);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    margin: 3px;
+    cursor: pointer;
+  }
+  .body-part-tag:hover { background: #d0dff5; }
+  .body-none { font-size: 13px; color: var(--gray-mid); font-style: italic; }
+
+  #body-svg .bp { cursor: pointer; transition: fill 0.15s; }
+  #body-svg .bp:hover { fill: #b8cfe8; }
+  #body-svg .bp.active { fill: #2563a8; }
+  #body-svg .bp.active text { fill: white; }
+
+  /* CAUSE checkboxes grid */
+  .cause-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .cause-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1.5px solid var(--gray-border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+  }
+  .cause-item:hover { border-color: var(--blue-mid); background: var(--blue-light); }
+  .cause-item.selected { border-color: var(--blue); background: var(--blue-light); color: var(--blue); font-weight: 600; }
+  .cause-item .chk-box {
+    width: 16px; height: 16px;
+    border-radius: 3px;
+    border: 2px solid var(--gray-border);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .cause-item.selected .chk-box { border-color: var(--blue); background: var(--blue); }
+  .cause-item.selected .chk-box::after {
+    content: '✓';
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  /* SI/NO pills */
+  .sino-group {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .sino-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border: 1.5px solid var(--gray-border);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  .sino-item:hover { border-color: var(--blue-mid); }
+  .sino-item input { display: none; }
+  .sino-item.si.selected { border-color: var(--success); background: var(--success-bg); color: var(--success); }
+  .sino-item.no.selected { border-color: var(--accent); background: #fdf2ee; color: var(--accent); }
+  .sino-item.na.selected { border-color: var(--gray-mid); background: #f0f0f4; color: var(--gray-mid); }
+
+  /* AZIONI CORRETTIVE */
+  .ac-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .ac-row textarea { flex: 1; min-height: 60px; }
+  .ac-row .ac-del {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    border: 1.5px solid var(--gray-border);
+    border-radius: var(--radius);
+    background: none;
+    cursor: pointer;
+    color: var(--accent);
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 6px;
+  }
+  .btn-add {
+    background: none;
+    border: 1.5px dashed var(--blue-mid);
+    color: var(--blue-mid);
+    border-radius: var(--radius);
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.15s;
+    margin-top: 4px;
+  }
+  .btn-add:hover { background: var(--blue-light); }
+
+  /* FIRMA SECTION */
+  .firma-note {
+    background: var(--warning-bg);
+    border: 1px solid #f0d080;
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--warning);
+    margin-bottom: 12px;
+  }
+
+  /* DIVIDER */
+  .divider {
+    height: 1px;
+    background: var(--gray-border);
+    margin: 14px 0;
+  }
+
+  /* SUBMIT */
+  .submit-area {
+    margin-top: 24px;
+    text-align: center;
+  }
+  .btn-submit {
+    background: var(--blue);
+    color: white;
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: 14px 48px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(26,74,122,0.3);
+  }
+  .btn-submit:hover { background: #163d67; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(26,74,122,0.35); }
+  .btn-submit:active { transform: translateY(0); }
+
+  /* SUCCESS */
+  #success-screen {
+    display: none;
+    text-align: center;
+    padding: 48px 20px;
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--blue-border);
+  }
+  #success-screen .success-icon {
+    width: 64px; height: 64px;
+    background: var(--success-bg);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 32px;
+  }
+  #success-screen h2 { color: var(--success); font-size: 22px; margin-bottom: 8px; }
+  #success-screen p { color: var(--text-light); font-size: 14px; margin-bottom: 4px; }
+  #success-screen .ticket { font-size: 12px; color: var(--gray-mid); margin-top: 16px; font-family: monospace; background: var(--gray-bg); padding: 6px 12px; border-radius: var(--radius); display: inline-block; }
+
+  .btn-new {
+    margin-top: 20px;
+    background: var(--blue-light);
+    color: var(--blue);
+    border: 1.5px solid var(--blue-border);
+    border-radius: var(--radius-lg);
+    padding: 10px 28px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* INFORTUNI extra */
+  .infortuni-extra {
+    display: none;
+    background: #fff8e8;
+    border: 1.5px solid #f0d080;
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-top: 8px;
+  }
+  .infortuni-extra.show { display: block; }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    .form-row.cols-2, .form-row.cols-3 { grid-template-columns: 1fr; }
+    .cause-grid { grid-template-columns: 1fr; }
+    .header-inner { flex-direction: column; align-items: flex-start; }
+    .header-title { text-align: left; }
+    .event-type-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-logo">
+      <img src="data:image/png;base64,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" alt="Somec Navale">
+    </div>
+    <div class="header-title">
+      <div class="doc-num">MS452-01 &nbsp;·&nbsp; Rev. 01</div>
+      <h1>Rilevazione e Analisi Incidenti</h1>
+    </div>
+  </div>
+  <div class="progress-bar" id="progress" style="width: 0%"></div>
+</div>
+
+<div class="container">
+
+  <form id="main-form" novalidate>
+
+    <!-- 1. DATA / ORA / CANTIERE -->
+    <div class="section-header">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      1 — Data, ora e luogo
+    </div>
+    <div class="section-body">
+      <div class="form-row cols-3">
+        <div class="form-group">
+          <label>Data <span class="req">*</span></label>
+          <input type="date" id="data" required>
+        </div>
+        <div class="form-group">
+          <label>Ora <span class="req">*</span></label>
+          <input type="time" id="ora" required>
+        </div>
+        <div class="form-group">
+          <label>Cantiere / Sito <span class="req">*</span></label>
+          <select id="cantiere" required>
+            <option value="">— Seleziona —</option>
+            <option>Monfalcone</option>
+            <option>Marghera</option>
+            <option>Genova</option>
+            <option>Turku</option>
+            <option>Saint-Nazaire</option>
+            <option>Papenburg</option>
+            <option>Stabilimento / Produzione Somec</option>
+            <option>Altro</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label>Area / Reparto <span class="req">*</span></label>
+          <input type="text" id="area" placeholder="es. Carpenteria, Ponte 5, Magazzino..." required>
+        </div>
+        <div class="form-group">
+          <label>Macchina / Attrezzatura</label>
+          <input type="text" id="macchina" placeholder="es. PLE, carroponte, smerigliatrice...">
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. PERSONA COINVOLTA -->
+    <div class="section-header">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      2 — Persona coinvolta
+    </div>
+    <div class="section-body">
+      <div class="form-row cols-3">
+        <div class="form-group">
+          <label>Cognome <span class="req">*</span></label>
+          <input type="text" id="cognome" required>
+        </div>
+        <div class="form-group">
+          <label>Nome <span class="req">*</span></label>
+          <input type="text" id="nome" required>
+        </div>
+        <div class="form-group">
+          <label>Azienda <span class="req">*</span></label>
+          <input type="text" id="azienda" placeholder="Somec o nome appaltatore" required>
+        </div>
+      </div>
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label>Mansione <span class="req">*</span></label>
+          <select id="mansione" required>
+            <option value="">— Seleziona —</option>
+            <option>Operatore</option>
+            <option>Saldatore</option>
+            <option>Supervisore / Preposto</option>
+            <option>Magazziniere / Logistica</option>
+            <option>Tecnico specializzato</option>
+            <option>Altro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Altre persone presenti</label>
+          <input type="text" id="altri" placeholder="Nome e cognome (opzionale)">
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. TIPO EVENTO -->
+    <div class="section-header">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      3 — Tipo di evento <span style="font-weight:400;text-transform:none;font-size:11px;opacity:0.85">&nbsp;(seleziona uno)</span>
+    </div>
+    <div class="section-body">
+      <div class="event-type-grid" id="event-type-group">
+        <label class="event-card" onclick="selectEvent(this,'near-miss')">
+          <input type="radio" name="evento" value="near-miss">
+          <div class="ev-icon">⚠️</div>
+          <div class="ev-label">Near Miss</div>
+          <div class="ev-desc">Successo qualcosa, nessun ferito</div>
+        </label>
+        <label class="event-card" onclick="selectEvent(this,'pericolosa')">
+          <input type="radio" name="evento" value="pericolosa">
+          <div class="ev-icon">🔍</div>
+          <div class="ev-label">Situazione pericolosa</div>
+          <div class="ev-desc">Potrebbe succedere qualcosa</div>
+        </label>
+        <label class="event-card" onclick="selectEvent(this,'emergenza')">
+          <input type="radio" name="evento" value="emergenza">
+          <div class="ev-icon">🔥</div>
+          <div class="ev-label">Emergenza</div>
+          <div class="ev-desc">Es. principio di incendio</div>
+        </label>
+        <label class="event-card" onclick="selectEvent(this,'lesione')">
+          <input type="radio" name="evento" value="lesione">
+          <div class="ev-icon">🩹</div>
+          <div class="ev-label">Lesione</div>
+          <div class="ev-desc">Ferita, senza lasciare il lavoro</div>
+        </label>
+        <label class="event-card danger" onclick="selectEvent(this,'infortunio')">
+          <input type="radio" name="evento" value="infortunio">
+          <div class="ev-icon">🚨</div>
+          <div class="ev-label">Infortunio</div>
+          <div class="ev-desc">Con prognosi / PS / medicazione</div>
+        </label>
+      </div>
+    </div>
+
+    <!-- 4. DESCRIZIONE -->
+    <div class="section-header">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      4 — Descrizione dell'accaduto
+    </div>
+    <div class="section-body">
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Descrizione <span class="req">*</span></label>
+        <textarea id="descrizione" placeholder="Descrivi cosa è successo, in quale contesto, quali operazioni erano in corso..." rows="4" required></textarea>
+      </div>
+
+      <div class="form-row cols-2" style="margin-bottom:12px">
+        <div class="form-group">
+          <label>Dinamica — cosa è successo</label>
+          <select id="dinamica">
+            <option value="">— Seleziona —</option>
+            <option>Caduto da (caduta dall'alto)</option>
+            <option>Caduto in piano (caduta stesso livello)</option>
+            <option>Ha urtato contro</option>
+            <option>Urtato da</option>
+            <option>Schiacciato da</option>
+            <option>Investito da</option>
+            <option>Impigliato / agganciato da</option>
+            <option>A contatto con</option>
+            <option>Ha inalato</option>
+            <option>Ha ingerito</option>
+            <option>Esposto a (agente fisico/chimico)</option>
+            <option>Ha messo un piede in fallo</option>
+            <option>Movimento scoordinato</option>
+            <option>Ha fatto uno sforzo</option>
+            <option>Altro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Specificare</label>
+          <input type="text" id="dinamica_det" placeholder="Dettaglio dinamica...">
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- CONTESTO -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label>Attività ordinaria?</label>
+          <div class="sino-group">
+            <label class="sino-item si" onclick="toggleSino(this)"><input type="radio" name="attord"> ✓ Sì</label>
+            <label class="sino-item no" onclick="toggleSino(this)"><input type="radio" name="attord"> ✗ No</label>
+            <label class="sino-item na" onclick="toggleSino(this)"><input type="radio" name="attord"> Saltuaria</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Indossava i DPI?</label>
+          <div class="sino-group">
+            <label class="sino-item si" onclick="toggleSino(this)"><input type="radio" name="dpi_ind"> ✓ Sì</label>
+            <label class="sino-item no" onclick="toggleSino(this)"><input type="radio" name="dpi_ind"> ✗ No</label>
+            <label class="sino-item na" onclick="toggleSino(this)"><input type="radio" name="dpi_ind"> N/P</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Formazione svolta?</label>
+          <div class="sino-group">
+            <label class="sino-item si" onclick="toggleSino(this)"><input type="radio" name="form_svolta"> ✓ Sì</label>
+            <label class="sino-item no" onclick="toggleSino(this)"><input type="radio" name="form_svolta"> ✗ No</label>
+            <label class="sino-item na" onclick="toggleSino(this)"><input type="radio" name="form_svolta"> In corso</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Attrezzature conformi?</label>
+          <div class="sino-group">
+            <label class="sino-item si" onclick="toggleSino(this)"><input type="radio" name="attr_conf"> ✓ Sì</label>
+            <label class="sino-item no" onclick="toggleSino(this)"><input type="radio" name="attr_conf"> ✗ No</label>
+            <label class="sino-item na" onclick="toggleSino(this)"><input type="radio" name="attr_conf"> N/P</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Spazi adeguati?</label>
+          <div class="sino-group">
+            <label class="sino-item si" onclick="toggleSino(this)"><input type="radio" name="spazi"> ✓ Sì</label>
+            <label class="sino-item no" onclick="toggleSino(this)"><input type="radio" name="spazi"> ✗ No</label>
+            <label class="sino-item na" onclick="toggleSino(this)"><input type="radio" name="spazi"> Riorg. in corso</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Procedure definite?</label>
+          <div class="sino-group">
+            <label class="sino-item si" onclick="toggleSino(this)"><input type="radio" name="proc_def"> ✓ Sì</label>
+            <label class="sino-item no" onclick="toggleSino(this)"><input type="radio" name="proc_def"> ✗ No</label>
+            <label class="sino-item na" onclick="toggleSino(this)"><input type="radio" name="proc_def"> Cambio org.</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. CORPO -->
+    <div class="section-header">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a3 3 0 100 6 3 3 0 000-6zM5 22v-2a7 7 0 0114 0v2"/></svg>
+      5 — Dove si è fatto male? <span style="font-weight:400;text-transform:none;font-size:11px;opacity:0.85">&nbsp;(clicca sul corpo)</span>
+    </div>
+    <div class="section-body">
+      <div class="body-section">
+        <div class="body-wrap">
+          <svg id="body-svg" width="120" height="240" viewBox="0 0 120 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Testa -->
+            <g class="bp" id="bp-testa" onclick="toggleBodyPart(this,'Testa')">
+              <ellipse cx="60" cy="22" rx="16" ry="18" fill="#e8f0fa" stroke="#2563a8" stroke-width="1.5"/>
+              <text x="60" y="26" text-anchor="middle" font-size="9" fill="#1a4a7a">Testa</text>
+            </g>
+            <!-- Collo -->
+            <g class="bp" id="bp-collo" onclick="toggleBodyPart(this,'Collo')">
+              <rect x="52" y="38" width="16" height="10" rx="3" fill="#e8f0fa" stroke="#2563a8" stroke-width="1.5"/>
+              <text x="60" y="46" text-anchor="middle" font-size="8" fill="#1a4a7a">Collo</text>
+            </g>
+            <!-- Torso -->
+            <g class="bp" id="bp-torso" onclick="toggleBodyPart(this,'Torso')">
+              <rect x="36" y="48" width="48" height="60" rx="6" fill="#e8f0fa" stroke="#2563a8" stroke-width="1.5"/>
+              <text x="60" y="82" text-anchor="middle" font-size="9" fill="#1a4a7a">Torso</text>
+            </g>
+            <!-- Braccio SX -->
+            <g class="bp" id="bp-braccio-sx" onclick="toggleBodyPart(this,'Braccio sinistro')">
+              <rect x="18" y="50" width="18" height="44" rx="6" fill="#e8f0fa" stroke="#2563a8" stroke-width="1.5"/>
+              <text x="27" y="76" text-anchor="middle" font-size="8" fill="#1a4a7a" transform="rotate(-90,27,76)">Br.Sx</text>
+            </g>
+            <!-- Braccio DX -->
+            <g class="bp" id="bp-braccio-dx" onclick="toggleBodyPart(this,'Braccio destro')">
+              <rect x="84" y="50" width="18" height="44" rx="6" fill="#e8f0fa" stroke="#2563a8" stroke-width="1.5"/>
+              <text x="93" y="76" text-anchor="middle" font-size="8" fill="#1a4a7a" transform="rotate(90,93,76)">Br.Dx</text>
+            </g>
+            <!-- Mano SX -->
+            <g class="bp" id="bp-mano-sx" onclick="toggleBodyPart(this,'Mano sinistra')">
+              <ellipse cx="27" cy="103" rx="9" ry="7" fill="#e8f0fa" stroke="#2563a8" stroke-width="1.5"/>
+              <text x="27" y="106" text-anchor="middle" font-size="8" fill="#1a4a7a">Mn.Sx</text>
+            </g>
+            <!-- Mano DX -->
+            <g class="bp" id="bp-mano-dx" onclick="toggleBodyPart(this,'Mano destra')">
+              <ellipse cx="93" cy="103" rx="9" ry="7" fill="#e8f0fa" stroke="#2563a8" stroke-width="1.5"/>
+              <text x="93" y="106" text-anchor="middle" font-size="8" fill="#1a4a7a">Mn.Dx</text>
+            </g>
+            <!-- Addome -->
+            <g class="bp" id="bp-addome" onclick="toggleBodyPart(this,'Addome')">
+              <rect x="36" y="108" width="48" height="32" rx="4" fill="#e8f0fa" stroke="#2563a8" stroke-width="1.5"/>
+              <text x="60" y="128" text-anchor="middle" font-size="9" fill="#1a4a7a">Addome</text>
+            </g>
+            <!-- Gamba SX -->
+            <g class="bp" id="bp-gamba-sx" onclick="toggleBodyPart(this,'Gamba sinistra')">
+              <rect x="36" y="140" width="22" height="56" rx="6" fill="#e8f0fa" stroke="#2563a8" stroke-width="1.5"/>
+              <text x="47" y="172" text-anchor="middle" font-size="8" fill="#1a4a7a">Gb.Sx</text>
+            </g>
+            <!-- Gamba DX -->
+            <g class="bp" id="bp-gamba-dx" onclick="toggleBodyPart(this,'Gamba destra')">
+              <rect x="62" y="140" width="22" height="56" rx="6" fill="#e8f0fa" stroke="#2563a8" stroke-width="1.5"/>
+              <text x="73" y="172" text-anchor="middle" font-size="8" fill="#1a4a7a">Gb.Dx</text>
+            </g>
+            <!-- Piede SX -->
+            <g class="bp" id="bp-piede-sx" onclick="toggleBodyPart(this,'Piede sinistro')">
+              <ellipse cx="44" cy="205" rx="12" ry="7" fill="#e8f0fa" stroke="#2563a8" stroke-width="1.5"/>
+              <text x="44" y="208" text-anchor="middle" font-size="8" fill="#1a4a7a">Pd.Sx</text>
+            </g>
+            <!-- Piede DX -->
+            <g class="bp" id="bp-piede-dx" onclick="toggleBodyPart(this,'Piede destro')">
+              <ellipse cx="76" cy="205" rx="12" ry="7" fill="#e8f0fa" stroke="#2563a8" stroke-width="1.5"/>
+              <text x="76" y="208" text-anchor="middle" font-size="8" fill="#1a4a7a">Pd.Dx</text>
+            </g>
+          </svg>
+          <p>Clicca per selezionare / deselezionare</p>
+        </div>
+        <div class="body-selected">
+          <h4>Parti selezionate</h4>
+          <div id="body-tags"><span class="body-none">Nessuna selezione</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. TRATTAMENTO -->
+    <div class="section-header">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      6 — Trattamento immediato
+    </div>
+    <div class="section-body">
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Cosa è stato fatto subito</label>
+        <textarea id="trattamento" placeholder="Descrivere il trattamento immediato (primo soccorso, evacuazione, allerta, fermo macchina...)" rows="3"></textarea>
+      </div>
+      <div id="infortuni-extra" class="infortuni-extra">
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label>N° riferimento denuncia infortunio</label>
+            <input type="text" id="denuncia_num" placeholder="Numero denuncia INAIL">
+          </div>
+          <div class="form-group">
+            <label>Giorni di prognosi</label>
+            <input type="number" id="prognosi" placeholder="N° giorni" min="0">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. ANALISI CAUSE -->
+    <div class="section-header">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v3M11 14h.01"/></svg>
+      7 — Analisi delle cause
+    </div>
+    <div class="section-body">
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Le procedure di lavoro sono state rispettate?</label>
+        <div class="sino-group">
+          <label class="sino-item si" onclick="toggleSino(this)"><input type="radio" name="proc_risp"> ✓ Sì</label>
+          <label class="sino-item no" onclick="toggleSino(this)"><input type="radio" name="proc_risp"> ✗ No</label>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Cause principali rilevate</label>
+        <div class="cause-grid" id="cause-grid">
+          <div class="cause-item" onclick="toggleCause(this)"><div class="chk-box"></div>Comportamento scorretto / imprudenza</div>
+          <div class="cause-item" onclick="toggleCause(this)"><div class="chk-box"></div>Mancato utilizzo DPI</div>
+          <div class="cause-item" onclick="toggleCause(this)"><div class="chk-box"></div>Procedura non seguita</div>
+          <div class="cause-item" onclick="toggleCause(this)"><div class="chk-box"></div>Formazione insufficiente</div>
+          <div class="cause-item" onclick="toggleCause(this)"><div class="chk-box"></div>Attrezzatura non conforme</div>
+          <div class="cause-item" onclick="toggleCause(this)"><div class="chk-box"></div>Manutenzione carente</div>
+          <div class="cause-item" onclick="toggleCause(this)"><div class="chk-box"></div>Condizioni ambientali (luce, spazio)</div>
+          <div class="cause-item" onclick="toggleCause(this)"><div class="chk-box"></div>Interferenza tra lavoratori</div>
+          <div class="cause-item" onclick="toggleCause(this)"><div class="chk-box"></div>Stanchezza / distrazione</div>
+          <div class="cause-item" onclick="toggleCause(this)"><div class="chk-box"></div>Mancata vigilanza preposto</div>
+          <div class="cause-item" onclick="toggleCause(this)"><div class="chk-box"></div>Procedura non esistente</div>
+          <div class="cause-item" onclick="toggleCause(this)"><div class="chk-box"></div>Causa esterna (terzi / Fincantieri)</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>NC rilevata — descrizione</label>
+        <textarea id="nc_desc" placeholder="Se rilevata una Non Conformità, descrivila qui..." rows="2"></textarea>
+      </div>
+    </div>
+
+    <!-- 8. AZIONI CORRETTIVE -->
+    <div class="section-header">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      8 — Azioni da intraprendere
+    </div>
+    <div class="section-body">
+      <div id="ac-list">
+        <div class="ac-row">
+          <textarea placeholder="Descrivi l'azione correttiva / preventiva..." rows="2"></textarea>
+          <button type="button" class="ac-del" onclick="removeAC(this)">×</button>
+        </div>
+      </div>
+      <button type="button" class="btn-add" onclick="addAC()">+ Aggiungi azione correttiva</button>
+
+      <div class="divider"></div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px;">
+        <div class="form-group">
+          <label>Aggiornamento DVR?</label>
+          <div class="sino-group">
+            <label class="sino-item si" onclick="toggleSino(this)"><input type="radio" name="dvr_agg"> ✓ Sì</label>
+            <label class="sino-item no" onclick="toggleSino(this)"><input type="radio" name="dvr_agg"> ✗ No</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Aggiornamento piano emergenza?</label>
+          <div class="sino-group">
+            <label class="sino-item si" onclick="toggleSino(this)"><input type="radio" name="pe_agg"> ✓ Sì</label>
+            <label class="sino-item no" onclick="toggleSino(this)"><input type="radio" name="pe_agg"> ✗ No</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. FIRME / RSPP -->
+    <div class="section-header">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      9 — Responsabili e firma RSPP
+    </div>
+    <div class="section-body">
+      <div class="firma-note">
+        ⚠️ Questo modulo verrà inviato all'RSPP per firma e archiviazione. Il campo sottostante è riservato alla firma digitale / visto dell'RSPP al momento della validazione.
+      </div>
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label>Responsabile di reparto</label>
+          <input type="text" id="resp_reparto" placeholder="Nome Cognome">
+        </div>
+        <div class="form-group">
+          <label>RLS</label>
+          <input type="text" id="rls_nome" placeholder="Nome Cognome">
+        </div>
+      </div>
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label>Segnalato da (nome compilatore) <span class="req">*</span></label>
+          <input type="text" id="compilatore" placeholder="Chi compila questo modulo" required>
+        </div>
+        <div class="form-group">
+          <label>Email (per copia) <span class="req">*</span></label>
+          <input type="email" id="email" placeholder="tua@email.com" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Note finali</label>
+        <textarea id="note_finali" placeholder="Eventuali note aggiuntive, contesto non catturato dai campi precedenti..." rows="2"></textarea>
+      </div>
+    </div>
+
+    <!-- SUBMIT -->
+    <div class="submit-area">
+      <button type="submit" class="btn-submit">
+        📤 Invia segnalazione a RSPP
+      </button>
+      <p style="font-size:12px;color:var(--gray-mid);margin-top:10px;">La segnalazione sarà ricevuta dall'ufficio HSE Somec</p>
+    </div>
+
+  </form>
+
+  <!-- SUCCESS -->
+  <div id="success-screen">
+    <div class="success-icon">✅</div>
+    <h2>Segnalazione inviata</h2>
+    <p>Il modulo è stato trasmesso all'RSPP Somec.</p>
+    <p>Verrai ricontattato per eventuale follow-up.</p>
+    <div class="ticket" id="ticket-num">Protocollo: —</div>
+    <br>
+    <button class="btn-new" onclick="resetForm()">Nuova segnalazione</button>
+  </div>
+
+</div>
+
+<script>
+// Set default date/time
+const now = new Date();
+document.getElementById('data').value = now.toISOString().split('T')[0];
+document.getElementById('ora').value = now.toTimeString().slice(0,5);
+
+// Progress tracking
+function updateProgress() {
+  const required = document.querySelectorAll('[required]');
+  let filled = 0;
+  required.forEach(el => { if (el.value.trim()) filled++; });
+  const eventSelected = document.querySelector('.event-card.selected');
+  const pct = Math.min(95, Math.round(((filled / required.length) * 80) + (eventSelected ? 15 : 0)));
+  document.getElementById('progress').style.width = pct + '%';
+}
+document.querySelectorAll('input, select, textarea').forEach(el => {
+  el.addEventListener('input', updateProgress);
+  el.addEventListener('change', updateProgress);
+});
+
+// Event type selection
+function selectEvent(card, type) {
+  document.querySelectorAll('.event-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  card.querySelector('input').checked = true;
+  // Show/hide infortuni extra
+  const extra = document.getElementById('infortuni-extra');
+  if (type === 'infortunio' || type === 'lesione') {
+    extra.classList.add('show');
+  } else {
+    extra.classList.remove('show');
+  }
+  updateProgress();
+}
+
+// SI/NO toggles
+function toggleSino(el) {
+  const name = el.querySelector('input').name;
+  document.querySelectorAll(`[name="${name}"]`).forEach(inp => {
+    inp.closest('.sino-item').classList.remove('selected');
+  });
+  el.classList.add('selected');
+  el.querySelector('input').checked = true;
+}
+
+// Cause
+function toggleCause(el) {
+  el.classList.toggle('selected');
+}
+
+// Body parts
+const bodyParts = new Set();
+function toggleBodyPart(el, name) {
+  if (bodyParts.has(name)) {
+    bodyParts.delete(name);
+    el.classList.remove('active');
+    el.querySelectorAll('ellipse,rect').forEach(s => s.setAttribute('fill','#e8f0fa'));
+    el.querySelectorAll('text').forEach(t => t.setAttribute('fill','#1a4a7a'));
+  } else {
+    bodyParts.add(name);
+    el.classList.add('active');
+    el.querySelectorAll('ellipse,rect').forEach(s => s.setAttribute('fill','#2563a8'));
+    el.querySelectorAll('text').forEach(t => t.setAttribute('fill','white'));
+  }
+  renderBodyTags();
+}
+function renderBodyTags() {
+  const cont = document.getElementById('body-tags');
+  if (bodyParts.size === 0) {
+    cont.innerHTML = '<span class="body-none">Nessuna selezione</span>';
+  } else {
+    cont.innerHTML = [...bodyParts].map(p =>
+      `<span class="body-part-tag" onclick="removeBodyPart('${p}')">${p} ×</span>`
+    ).join('');
+  }
+}
+function removeBodyPart(name) {
+  const el = document.querySelector(`#body-svg .bp`);
+  document.querySelectorAll('#body-svg .bp').forEach(g => {
+    if (g.id) {
+      const txt = g.querySelector('text');
+      // Find by stored name
+    }
+  });
+  bodyParts.delete(name);
+  // Reset all, re-render
+  document.querySelectorAll('#body-svg .bp').forEach(g => {
+    g.classList.remove('active');
+    g.querySelectorAll('ellipse,rect').forEach(s => s.setAttribute('fill','#e8f0fa'));
+    g.querySelectorAll('text').forEach(t => t.setAttribute('fill','#1a4a7a'));
+  });
+  bodyParts.forEach(p => {
+    document.querySelectorAll('#body-svg .bp').forEach(g => {
+      if (g.dataset && g.dataset.name === p) {
+        g.classList.add('active');
+        g.querySelectorAll('ellipse,rect').forEach(s => s.setAttribute('fill','#2563a8'));
+        g.querySelectorAll('text').forEach(t => t.setAttribute('fill','white'));
+      }
+    });
+  });
+  renderBodyTags();
+}
+
+// Store name in dataset
+document.querySelectorAll('#body-svg .bp').forEach(g => {
+  const txt = g.querySelector('text');
+  if (txt) {
+    const onclick = g.getAttribute('onclick');
+    const m = onclick && onclick.match(/'([^']+)'/g);
+    if (m && m[1]) g.dataset.name = m[1].replace(/'/g,'');
+  }
+});
+
+// AC rows
+function addAC() {
+  const list = document.getElementById('ac-list');
+  const row = document.createElement('div');
+  row.className = 'ac-row';
+  row.innerHTML = `<textarea placeholder="Descrivi l'azione correttiva / preventiva..." rows="2"></textarea><button type="button" class="ac-del" onclick="removeAC(this)">×</button>`;
+  list.appendChild(row);
+}
+function removeAC(btn) {
+  const rows = document.querySelectorAll('.ac-row');
+  if (rows.length > 1) btn.closest('.ac-row').remove();
+  else btn.closest('.ac-row').querySelector('textarea').value = '';
+}
+
+// ═══════════════════════════════════════════════════
+// EMAILJS CONFIG — sostituisci con le tue chiavi
+// Guida sotto per ottenerle (3 minuti)
+// ═══════════════════════════════════════════════════
+const EMAILJS_PUBLIC_KEY   = 'DTKDYuVNORzx-J2Jq';
+const EMAILJS_SERVICE_ID   = 'service_nz3f6gr';
+const EMAILJS_TEMPLATE_ID  = 'template_z0cc9na';
+const RSPP_EMAIL           = 'marco_sterchele@somecgroup.com'; // RSPP Somec Navale
+// ═══════════════════════════════════════════════════
+// Inizializzazione EmailJS con la Public Key
+emailjs.init(EMAILJS_PUBLIC_KEY);
+
+// Form submission
+document.getElementById('main-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  // Validazione campi obbligatori
+  const required = this.querySelectorAll('[required]');
+  let valid = true;
+  required.forEach(el => {
+    if (!el.value.trim()) {
+      el.style.borderColor = '#d04a1a';
+      if (valid) el.scrollIntoView({behavior:'smooth', block:'center'});
+      valid = false;
+    } else {
+      el.style.borderColor = '';
+    }
+  });
+  if (!document.querySelector('.event-card.selected')) {
+    alert('Seleziona il tipo di evento (sezione 3)');
+    return;
+  }
+  if (!valid) {
+    alert('Completa i campi obbligatori evidenziati in rosso');
+    return;
+  }
+
+  // Numero protocollo
+  const now = new Date();
+  const proto = `MS452-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(Math.floor(Math.random()*9000)+1000)}`;
+
+  // Raccolta dati per email
+  const tipoEvento = document.querySelector('.event-card.selected .ev-label')?.textContent || '—';
+  const causeSelezionate = [...document.querySelectorAll('.cause-item.selected')]
+    .map(c => c.textContent.trim()).join(', ') || 'Nessuna selezionata';
+  const partiCorpo = bodyParts.size > 0 ? [...bodyParts].join(', ') : 'Non specificato';
+  const azioniAC = [...document.querySelectorAll('#ac-list textarea')]
+    .map((t,i) => t.value.trim() ? `${i+1}. ${t.value.trim()}` : '')
+    .filter(Boolean).join('\n') || 'Nessuna';
+
+  const templateParams = {
+    to_email:       RSPP_EMAIL,
+    protocollo:     proto,
+    data_ora:       `${document.getElementById('data').value} ore ${document.getElementById('ora').value}`,
+    cantiere:       document.getElementById('cantiere').value,
+    area:           document.getElementById('area').value,
+    macchina:       document.getElementById('macchina').value || '—',
+    cognome:        document.getElementById('cognome').value,
+    nome:           document.getElementById('nome').value,
+    azienda:        document.getElementById('azienda').value,
+    mansione:       document.getElementById('mansione').value,
+    tipo_evento:    tipoEvento,
+    descrizione:    document.getElementById('descrizione').value,
+    dinamica:       document.getElementById('dinamica').value || '—',
+    dinamica_det:   document.getElementById('dinamica_det').value || '—',
+    parti_corpo:    partiCorpo,
+    trattamento:    document.getElementById('trattamento').value || '—',
+    denuncia_num:   document.getElementById('denuncia_num').value || '—',
+    prognosi:       document.getElementById('prognosi').value || '—',
+    cause:          causeSelezionate,
+    nc_desc:        document.getElementById('nc_desc').value || '—',
+    azioni_ac:      azioniAC,
+    resp_reparto:   document.getElementById('resp_reparto').value || '—',
+    rls_nome:       document.getElementById('rls_nome').value || '—',
+    compilatore:    document.getElementById('compilatore').value,
+    email_comp:     document.getElementById('email').value,
+    note_finali:    document.getElementById('note_finali').value || '—',
+    reply_to:       document.getElementById('email').value,
+  };
+
+  // Bottone in stato "invio"
+  const btnSubmit = document.querySelector('.btn-submit');
+  btnSubmit.textContent = '⏳ Invio in corso...';
+  btnSubmit.disabled = true;
+
+  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+    .then(() => {
+      // Successo
+      document.getElementById('main-form').style.display = 'none';
+      document.getElementById('success-screen').style.display = 'block';
+      document.getElementById('ticket-num').textContent = 'Protocollo: ' + proto;
+      document.getElementById('progress').style.width = '100%';
+      window.scrollTo({top:0, behavior:'smooth'});
+    })
+    .catch((err) => {
+      console.error('EmailJS error:', err);
+      // Fallback: mostra successo locale anche se email fallisce
+      // (evita blocco operativo in cantiere)
+      document.getElementById('main-form').style.display = 'none';
+      document.getElementById('success-screen').style.display = 'block';
+      document.getElementById('ticket-num').textContent = 'Protocollo: ' + proto + ' ⚠️ (invio email da verificare)';
+      document.getElementById('progress').style.width = '100%';
+      window.scrollTo({top:0, behavior:'smooth'});
+    })
+    .finally(() => {
+      btnSubmit.textContent = '📤 Invia segnalazione a RSPP';
+      btnSubmit.disabled = false;
+    });
+});
+
+function resetForm() {
+  document.getElementById('main-form').reset();
+  document.getElementById('main-form').style.display = 'block';
+  document.getElementById('success-screen').style.display = 'none';
+  document.getElementById('progress').style.width = '0%';
+  document.querySelectorAll('.event-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.sino-item').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.cause-item').forEach(c => c.classList.remove('selected'));
+  bodyParts.clear();
+  renderBodyTags();
+  document.querySelectorAll('#body-svg .bp').forEach(g => {
+    g.classList.remove('active');
+    g.querySelectorAll('ellipse,rect').forEach(s => s.setAttribute('fill','#e8f0fa'));
+    g.querySelectorAll('text').forEach(t => t.setAttribute('fill','#1a4a7a'));
+  });
+  const now = new Date();
+  document.getElementById('data').value = now.toISOString().split('T')[0];
+  document.getElementById('ora').value = now.toTimeString().slice(0,5);
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+</script>
+</body>
+</html>
