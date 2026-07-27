@@ -1573,7 +1573,41 @@ document.getElementById('main-form').addEventListener('submit', function(e){
   emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params)
     .then(()=>{
       showSuccess();
-      fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:[{email:HSE_DIRECT}],subject:'[SafeReport] '+params.tipo_evento+' — '+params.protocollo,htmlContent:'<p>'+JSON.stringify(params).replace(/,/g,'<br>')+'</p>'})}).catch(()=>{});
+      const _html = '<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto">'
+        +'<div style="background:#1a4a7a;padding:14px 20px;border-radius:6px 6px 0 0">'
+        +'<span style="color:white;font-size:16px;font-weight:700">🚨 SOMEC NAVALE — MS452-01 — '+params.tipo_evento+'</span></div>'
+        +'<div style="background:#f5f6f8;padding:16px 20px;border:1px solid #d0d4da;border-top:none;font-size:13px">'
+        +'<p><strong>Protocollo:</strong> '+params.protocollo+'</p>'
+        +'<p><strong>Data/Ora:</strong> '+params.data_ora+' &nbsp;|&nbsp; <strong>Cantiere:</strong> '+params.cantiere+' &nbsp;|&nbsp; <strong>Area:</strong> '+params.area+'</p>'
+        +'<p><strong>Persona:</strong> '+params.cognome+' '+params.nome+' — '+params.azienda+' — '+params.mansione+'</p>'
+        +'<hr style="border:none;border-top:1px solid #d0d4da;margin:10px 0">'
+        +'<p><strong>Tipo evento:</strong> <span style="color:#1a4a7a;font-weight:700">'+params.tipo_evento+'</span></p>'
+        +'<p><strong>Descrizione:</strong><br>'+params.descrizione+'</p>'
+        +(params.dinamica&&params.dinamica!='—'?'<p><strong>Dinamica:</strong> '+params.dinamica+(params.dinamica_det&&params.dinamica_det!='—'?' — '+params.dinamica_det:'')+'</p>':'')
+        +(params.parti_corpo&&params.parti_corpo!='—'?'<p><strong>Parti corpo:</strong> '+params.parti_corpo+'</p>':'')
+        +'<hr style="border:none;border-top:1px solid #d0d4da;margin:10px 0">'
+        +(params.trattamento&&params.trattamento!='—'?'<p><strong>Trattamento immediato:</strong> '+params.trattamento+'</p>':'')
+        +(params.denuncia_num&&params.denuncia_num!='—'?'<p><strong>N° denuncia:</strong> '+params.denuncia_num+' &nbsp;|&nbsp; <strong>Prognosi:</strong> '+params.prognosi+' gg</p>':'')
+        +'<p><strong>Cause:</strong> '+params.cause+'</p>'
+        +(params.nc_desc&&params.nc_desc!='—'?'<p><strong>NC rilevata:</strong> '+params.nc_desc+'</p>':'')
+        +(params.azioni_ac&&params.azioni_ac!='—'?'<p><strong>Azioni correttive:</strong><br>'+params.azioni_ac.replace(/\n/g,'<br>')+'</p>':'')
+        +'<hr style="border:none;border-top:1px solid #d0d4da;margin:10px 0">'
+        +'<p><strong>Resp. reparto:</strong> '+params.resp_reparto+' &nbsp;|&nbsp; <strong>RLS:</strong> '+params.rls_nome+'</p>'
+        +'<p><strong>Segnalato da:</strong> '+params.compilatore+' ('+params.reply_to+')</p>'
+        +(params.geo&&params.geo!='Non rilevata'?'<p style="color:#666;font-size:12px">📍 GPS: '+params.geo+'</p>':'')
+        +'<p style="color:#666;font-size:12px">📸 '+params.foto_num+' &nbsp;|&nbsp; 🌐 '+params.lingua+'</p>'
+        +'</div>'
+        +'<div style="background:#e8eaed;padding:8px 20px;border-radius:0 0 6px 6px;font-size:10px;color:#888">'
+        +'SOMEC SafeReport · MS452-01 · Somec Navale S.p.A. · HSE Department</div></div>';
+      fetch(WORKER_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          to:[{email:HSE_DIRECT}],
+          subject:'[SOMEC SafeReport] '+params.tipo_evento+' — '+params.protocollo,
+          htmlContent:_html
+        })
+      }).catch(()=>{});
     })
     .catch(()=>{ showSuccess(true); })
     .finally(()=>{ btn.innerHTML='📤 <span>'+t('invia')+'</span>'; btn.disabled=false; });
