@@ -224,8 +224,39 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     </div>
   </div>
   <div class="form-row cols-2">
-    <div class="form-group"><label data-i18n="area">Area / Reparto <span class="req">*</span></label><input type="text" id="area" required></div>
-    <div class="form-group"><label data-i18n="macchina">Macchina / Attrezzatura</label><input type="text" id="macchina"></div>
+    <div class="form-group"><label data-i18n="area">Area / Reparto <span class="req">*</span></label>
+      <select id="area" required>
+        <option value="">— Seleziona —</option>
+        <optgroup label="🏭 Stabilimento Produzione">
+          <option>R3 — Alluminio / Lavorazioni</option>
+          <option>R4 — Assemblaggio</option>
+          <option>R5 — Magazzino / Spedizione</option>
+          <option>R7 — Carpenteria</option>
+          <option>R8 — Vetreria</option>
+          <option>Uffici stabilimento</option>
+          <option>Piazzale esterno stabilimento</option>
+          <option>Parcheggio stabilimento</option>
+        </optgroup>
+        <optgroup label="🚢 Cantiere / Bordo nave">
+          <option>Bordo nave — interno</option>
+          <option>Bordo nave — coperta</option>
+          <option>Banchina</option>
+          <option>Bacino di carenaggio</option>
+          <option>Pontile / Area ormeggio</option>
+          <option>Magazzino cantiere</option>
+          <option>Area pubblica / condivisa cantiere</option>
+          <option>Piazzale cantiere</option>
+          <option>Uffici cantiere</option>
+        </optgroup>
+        <optgroup label="📦 Logistica / Altro">
+          <option>Magazzino esterno</option>
+          <option>Area carico / scarico</option>
+          <option>Percorso / Viabilità interna</option>
+          <option>Altro / Non specificato</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="form-group"><label data-i18n="macchina">Macchina / Attrezzatura / Zona</label><input type="text" id="macchina" placeholder="es. Gruetta, Zona sbarco, Pontile nord..."></div>
   </div>
   <!-- GEOLOCALIZZAZIONE -->
   <div class="form-group">
@@ -253,13 +284,36 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div class="form-group">
       <label data-i18n="mansione">Mansione <span class="req">*</span></label>
       <select id="mansione" required>
-        <option value="">—</option>
-        <option data-i18n-opt="operatore">Operatore</option>
-        <option data-i18n-opt="saldatore">Saldatore</option>
-        <option data-i18n-opt="supervisore">Supervisore / Preposto</option>
-        <option data-i18n-opt="magazziniere">Magazziniere / Logistica</option>
-        <option data-i18n-opt="tecnico">Tecnico specializzato</option>
-        <option data-i18n-opt="altro">Altro</option>
+        <option value="">— Seleziona —</option>
+        <optgroup label="🏭 Stabilimento">
+          <option>Operatore alluminio</option>
+          <option>Operatore assemblaggio</option>
+          <option>Operatore carpenteria</option>
+          <option>Operatore vetreria</option>
+          <option>Magazziniere / Logistica</option>
+          <option>Mulettista</option>
+          <option>Manutentore</option>
+          <option>Impiegato / Ufficio</option>
+        </optgroup>
+        <optgroup label="🚢 Cantiere">
+          <option>Carpentiere navale</option>
+          <option>Saldatore</option>
+          <option>Elettricista</option>
+          <option>Tubista / Pipefitter</option>
+          <option>Falegname / Ebanista</option>
+          <option>Verniciatore</option>
+          <option>Gruista / Operatore sollevamento</option>
+          <option>Ponteggiatore</option>
+          <option>Tecnico specializzato</option>
+          <option>Coordinatore / Capo squadra</option>
+        </optgroup>
+        <optgroup label="👤 Ruoli trasversali">
+          <option>Supervisore / Preposto</option>
+          <option>Responsabile di cantiere</option>
+          <option>Tecnico HSE</option>
+          <option>Visitatore / Ospite</option>
+          <option>Altro</option>
+        </optgroup>
       </select>
     </div>
     <div class="form-group"><label data-i18n="altri">Altre persone presenti</label><input type="text" id="altri"></div>
@@ -542,16 +596,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     </div>
   </div>
 
-  <!-- FIRMA RSPP -->
-  <div class="form-group" style="margin-top:12px">
-    <label data-i18n="firmaRSPP">✍️ Firma RSPP / Responsable HSE (da completare in ufficio)</label>
-    <div class="firma-canvas-wrap">
-      <canvas id="firma-rspp-canvas" height="100"></canvas>
-    </div>
-    <div class="firma-tools">
-      <button type="button" onclick="clearFirma('firma-rspp-canvas')" data-i18n="cancFirma">Cancella firma</button>
-    </div>
-  </div>
+  
 
   <div class="form-group" style="margin-top:10px">
     <label data-i18n="noteFinali">Note finali</label>
@@ -1803,7 +1848,7 @@ function resetForm(){
     g.querySelectorAll('text').forEach(t=>t.setAttribute('fill','#1a4a7a'));
   });
   fotoFiles.length=0; document.getElementById('foto-previews').innerHTML=''; document.getElementById('foto-count').textContent='';
-  clearFirma('firma-canvas'); clearFirma('firma-rspp-canvas');
+  clearFirma('firma-canvas');
   document.getElementById('infortuni-extra').classList.remove('show');
   const now=new Date();
   document.getElementById('data').value=now.toISOString().split('T')[0];
@@ -1822,7 +1867,6 @@ window.addEventListener('load', ()=>{
   document.getElementById('ora').value=now.toTimeString().slice(0,5);
 
   initCanvas('firma-canvas');
-  initCanvas('firma-rspp-canvas');
   updateCounterDisplay();
 
   const draft=loadDraft();
@@ -1832,7 +1876,7 @@ window.addEventListener('load', ()=>{
 });
 
 window.addEventListener('resize',()=>{
-  ['firma-canvas','firma-rspp-canvas'].forEach(id=>{
+  ['firma-canvas'].forEach(id=>{
     const c=document.getElementById(id);
     if(c){ const img=c.toDataURL(); c.width=c.offsetWidth||600; const ctx=c.getContext('2d'); const i=new Image(); i.onload=()=>ctx.drawImage(i,0,0); i.src=img; }
   });
