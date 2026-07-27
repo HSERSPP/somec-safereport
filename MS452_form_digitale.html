@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SOMEC SafeReport — MS452-01</title>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root {
@@ -593,7 +592,6 @@ const EMAILJS_TEMPLATE_ID = 'template_z0cc9na';
 const RSPP_EMAIL          = 'marco_sterchele@somecgroup.com';
 const WORKER_URL = 'https://somec-brevo-proxy.som-marco-sterchele.workers.dev';
 const HSE_DIRECT = 'msterchele@somecgroup.com';
-emailjs.init(EMAILJS_PUBLIC_KEY);
 // ═══════════════════════════════════════════════════
 
 // ── I18N ──────────────────────────────────────────
@@ -1570,10 +1568,8 @@ document.getElementById('main-form').addEventListener('submit', function(e){
   const btn=document.querySelector('.btn-submit');
   btn.textContent='⏳ '+t('invia')+'...'; btn.disabled=true;
 
-  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params)
-    .then(()=>{
-      showSuccess();
-      const _html = '<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto">'
+  // Invio via Cloudflare Worker → Brevo
+  const _html = '<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto">'
         +'<div style="background:#1a4a7a;padding:14px 20px;border-radius:6px 6px 0 0">'
         +'<span style="color:white;font-size:16px;font-weight:700">🚨 SOMEC NAVALE — MS452-01 — '+params.tipo_evento+'</span></div>'
         +'<div style="background:#f5f6f8;padding:16px 20px;border:1px solid #d0d4da;border-top:none;font-size:13px">'
@@ -1599,19 +1595,18 @@ document.getElementById('main-form').addEventListener('submit', function(e){
         +'</div>'
         +'<div style="background:#e8eaed;padding:8px 20px;border-radius:0 0 6px 6px;font-size:10px;color:#888">'
         +'SOMEC SafeReport · MS452-01 · Somec Navale S.p.A. · HSE Department</div></div>';
-      fetch(WORKER_URL,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          sender:{name:'SOMEC SafeReport',email:'som.marco.sterchele@gmail.com'},
-          to:[{email:HSE_DIRECT}],
-          subject:'[SOMEC SafeReport] '+params.tipo_evento+' — '+params.protocollo,
-          htmlContent:_html
-        })
-      }).catch(()=>{});
+  fetch(WORKER_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      to:[{email:HSE_DIRECT}],
+      subject:'[SOMEC SafeReport] '+params.tipo_evento+' — '+params.protocollo,
+      htmlContent:_html
     })
-    .catch(()=>{ showSuccess(true); })
-    .finally(()=>{ btn.innerHTML='📤 <span>'+t('invia')+'</span>'; btn.disabled=false; });
+  })
+  .then(resp=>{ if(resp.ok) showSuccess(false); else showSuccess(true); })
+  .catch(()=>{ showSuccess(true); })
+  .finally(()=>{ btn.innerHTML='📤 <span>'+t('invia')+'</span>'; btn.disabled=false; });
 });
 
 function showSuccess(withWarning=false){
