@@ -1595,18 +1595,160 @@ document.getElementById('main-form').addEventListener('submit', function(e){
         +'</div>'
         +'<div style="background:#e8eaed;padding:8px 20px;border-radius:0 0 6px 6px;font-size:10px;color:#888">'
         +'SOMEC SafeReport · MS452-01 · Somec Navale S.p.A. · HSE Department</div></div>';
-  fetch(WORKER_URL,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
+  // Genera PDF base64, poi invia con allegato
+  const _proto = params.protocollo;
+  const _subject = '[SOMEC SafeReport] '+params.tipo_evento+' — '+_proto;
+  const _filename = 'MS452_'+_proto+'.pdf';
+
+  function _sendWorker(attachment){
+    const body = {
       to:[{email:HSE_DIRECT}],
-      subject:'[SOMEC SafeReport] '+params.tipo_evento+' — '+params.protocollo,
+      subject:_subject,
       htmlContent:_html
-    })
-  })
-  .then(resp=>{ if(resp.ok) showSuccess(false); else showSuccess(true); })
-  .catch(()=>{ showSuccess(true); })
-  .finally(()=>{ btn.innerHTML='📤 <span>'+t('invia')+'</span>'; btn.disabled=false; });
+    };
+    if(attachment) body.attachment = [{content:attachment, name:_filename}];
+    return fetch(WORKER_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+  }
+
+  function _pdfToB64(){
+    return new Promise((resolve,reject)=>{
+      try{
+        const {jsPDF}=window.jspdf;
+        const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+        const W=210,M=12,CW=W-2*M;
+        const BL=[26,74,122],WH=[255,255,255],GR=[245,246,248],DK=[26,30,40],GY=[180,185,192];
+        const LW=0.25;
+        let y=8;
+        // Header
+        doc.setDrawColor(...GY);doc.setLineWidth(LW);doc.rect(M,y,CW,14,'S');
+        doc.setFillColor(...WH);doc.rect(M,y,38,14,'F');
+        try{doc.addImage(document.querySelector('.header-logo img').src,'PNG',M+1,y+1,34,11);}catch(e){}
+        doc.line(M+38,y,M+38,y+22);
+        doc.setTextColor(...DK);doc.setFontSize(11);doc.setFont('helvetica','bold');
+        doc.text('MODULO SICUREZZA',M+80,y+8,{align:'center'});
+        doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(...[74,80,96]);
+        doc.text(t('titolo'),M+80,y+13,{align:'center'});
+        const nx=M+38+CW*0.56;doc.line(nx,y,nx,y+14);
+        doc.setFontSize(9);doc.setTextColor(...BL);doc.setFont('helvetica','bold');doc.text('MS452-01',nx+2,y+9);
+        doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(...[74,80,96]);doc.text('Rev.02',nx+2,y+13);
+        y+=18;
+        // Protocollo + evento
+        doc.setFillColor(232,240,250);doc.setDrawColor(...BL);doc.setLineWidth(0.4);doc.rect(M,y,CW,8,'FD');
+        doc.setTextColor(...BL);doc.setFontSize(10);doc.setFont('helvetica','bold');doc.text('Protocollo: '+params.protocollo,M+2,y+6);
+        doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(...[74,80,96]);doc.text(new Date().toLocaleString('it-IT'),W-M,y+6,{align:'right'});
+        doc.setLineWidth(LW);y+=10;
+        const evEl=document.querySelector('.event-card.selected .ev-label');
+        const evTxt=evEl?evEl.textContent.trim().toUpperCase():'—';
+        const isInf=!!evTxt.match(/INFORT|ACCIDENT|UNFALL/);
+        doc.setFillColor(...(isInf?[192,57,43]:BL));doc.rect(M,y,CW,7,'F');
+        doc.setTextColor(...WH);doc.setFontSize(10);doc.setFont('helvetica','bold');
+        doc.text('TIPO EVENTO: '+evTxt,W/2,y+5.5,{align:'center'});y+=9;
+        // Helper riga
+        function rw(lbl,val,ry){
+          doc.setDrawColor(...GY);doc.setLineWidth(LW);doc.rect(M,ry,CW,7,'S');
+          doc.setFillColor(...GR);doc.rect(M,ry,46,7,'F');doc.line(M+46,ry,M+46,ry+7);
+          doc.setTextColor(...BL);doc.setFontSize(7);doc.setFont('helvetica','bold');doc.text(lbl.toUpperCase()+':',M+1,ry+5);
+          doc.setTextColor(...DK);doc.setFont('helvetica','normal');doc.setFontSize(9);
+          const ls=doc.splitTextToSize(String(val||'—'),CW-49);doc.text(ls,M+48,ry+5);
+          return ry+7;
+        }
+        function sec(ttl,sy){
+          doc.setFillColor(...BL);doc.rect(M,sy,CW,6,'F');
+          doc.setTextColor(...WH);doc.setFontSize(8);doc.setFont('helvetica','bold');
+          doc.text(ttl.toUpperCase(),M+2,sy+4.5);return sy+7;
+        }
+        // Sezioni
+        y=sec('1 — Data, Ora e Luogo',y);
+        y=rw('Data / Ora',document.getElementById('data').value+' ore '+document.getElementById('ora').value,y);
+        y=rw('Cantiere / Sito',document.getElementById('cantiere').value,y);
+        y=rw('Area / Reparto',document.getElementById('area').value,y);
+        const mac=document.getElementById('macchina').value;if(mac)y=rw('Macchina',mac,y);
+        const lat=document.getElementById('geo-lat').value,lng=document.getElementById('geo-lng').value,acc=document.getElementById('geo-acc').value;
+        if(lat)y=rw('GPS',lat+', '+lng+(acc?' (±'+acc+'m)':''),y);
+        y+=2;
+        y=sec('2 — Persona Coinvolta',y);
+        y=rw('Nominativo',document.getElementById('cognome').value+' '+document.getElementById('nome').value,y);
+        y=rw('Azienda / Mansione',document.getElementById('azienda').value+' — '+document.getElementById('mansione').value,y);
+        const alt=document.getElementById('altri').value;if(alt)y=rw('Altri presenti',alt,y);
+        y+=2;
+        y=sec('3 — Descrizione e Cause',y);
+        const desc=document.getElementById('descrizione').value||'—';
+        const dL=doc.splitTextToSize(desc,CW-4);const dH=Math.max(12,dL.length*4.5+4);
+        doc.setDrawColor(...GY);doc.rect(M,y,CW,dH,'S');
+        doc.setTextColor(...DK);doc.setFontSize(9);doc.setFont('helvetica','normal');doc.text(dL,M+2,y+5);
+        y+=dH+2;
+        const din=document.getElementById('dinamica').value;if(din&&din!='')y=rw('Dinamica',din,y);
+        if(bodyParts&&bodyParts.size>0)y=rw('Parti corpo',[...bodyParts].join(', '),y);
+        const cause=[...document.querySelectorAll('.cause-item.selected')].map(c=>c.querySelector('span').textContent).join(', ');
+        if(cause)y=rw('Cause',cause,y);
+        const nc=document.getElementById('nc_desc').value;if(nc)y=rw('NC rilevata',nc,y);
+        y+=2;
+        y=sec('4 — Trattamento e Azioni',y);
+        const tratt=document.getElementById('trattamento').value;if(tratt)y=rw('Trattamento immediato',tratt,y);
+        const den=document.getElementById('denuncia_num').value;if(den)y=rw('N° denuncia',den,y);
+        const prog=document.getElementById('prognosi').value;if(prog)y=rw('Prognosi (gg)',prog,y);
+        const az=[...document.querySelectorAll('#ac-list textarea')].map((el,i)=>el.value.trim()?(i+1)+'. '+el.value.trim():'').filter(Boolean).join(' | ');
+        if(az)y=rw('Azioni correttive',az,y);
+        y+=2;
+        y=sec('5 — Responsabili',y);
+        y=rw('Resp. reparto / RLS',(document.getElementById('resp_reparto').value||'—')+' / '+(document.getElementById('rls_nome').value||'—'),y);
+        y=rw('Segnalato da',document.getElementById('compilatore').value+' ('+document.getElementById('email').value+')',y);
+        const note=document.getElementById('note_finali').value;if(note)y=rw('Note',note,y);
+        y+=5;
+        // Firme
+        const hW=(CW-4)/2;
+        doc.setTextColor(...BL);doc.setFontSize(8);doc.setFont('helvetica','bold');
+        doc.text('FIRMA COMPILATORE',M,y+4);
+        doc.text('FIRMA RSPP / RESPONSABLE HSE',M+hW+4,y+4);y+=6;
+        doc.setDrawColor(...GY);doc.rect(M,y,hW,20,'S');doc.rect(M+hW+4,y,hW,20,'S');
+        function fVuota(id){const c=document.getElementById(id);return!c.getContext('2d').getImageData(0,0,c.width,c.height).data.some(v=>v!==0);}
+        if(!fVuota('firma-canvas'))doc.addImage(document.getElementById('firma-canvas').toDataURL(),'PNG',M+1,y+1,hW-2,18);
+        else{doc.setTextColor(180,180,180);doc.setFontSize(9);doc.setFont('helvetica','italic');doc.text('(non firmato)',M+hW/2,y+11,{align:'center'});}
+        if(!fVuota('firma-rspp-canvas'))doc.addImage(document.getElementById('firma-rspp-canvas').toDataURL(),'PNG',M+hW+5,y+1,hW-2,18);
+        else{doc.setTextColor(180,180,180);doc.setFontSize(9);doc.setFont('helvetica','italic');doc.text('(da completare)',M+hW+4+hW/2,y+11,{align:'center'});}
+        // Footer
+        const tot=doc.internal.getNumberOfPages();
+        for(let p=1;p<=tot;p++){
+          doc.setPage(p);doc.setFillColor(...BL);doc.rect(0,287,W,10,'F');
+          doc.setTextColor(...WH);doc.setFontSize(7.5);doc.setFont('helvetica','normal');
+          doc.text('SOMEC SafeReport · MS452-01 · Somec Navale S.p.A. · HSE Department',W/2,293,{align:'center'});
+          doc.text('Pag. '+p+'/'+tot,W-M,293,{align:'right'});
+        }
+        // Foto
+        if(fotoFiles&&fotoFiles.length>0){
+          doc.addPage();y=20;
+          doc.setFillColor(...BL);doc.rect(M,y,CW,6,'F');
+          doc.setTextColor(...WH);doc.setFontSize(8);doc.setFont('helvetica','bold');
+          doc.text('FOTO ALLEGATE ('+fotoFiles.length+')',M+2,y+4.5);y+=8;
+          const tW=38,tH=30,tG=3;
+          Promise.all(fotoFiles.slice(0,4).map((f,i)=>new Promise(res=>{
+            const r=new FileReader();r.onload=e=>{
+              try{doc.setDrawColor(...GY);doc.rect(M+(tW+tG)*i,y,tW,tH,'S');doc.addImage(e.target.result,'JPEG',M+(tW+tG)*i+1,y+1,tW-2,tH-5);doc.setTextColor(...[74,80,96]);doc.setFontSize(7);doc.text('Foto '+(i+1),M+(tW+tG)*i+tW/2,y+tH-1,{align:'center'});}catch(e2){}
+              res();
+            };r.readAsDataURL(f);
+          }))).then(()=>{
+            const b64=doc.output('datauristring').split(',')[1];
+            resolve(b64);
+          });
+        } else {
+          const b64=doc.output('datauristring').split(',')[1];
+          resolve(b64);
+        }
+      }catch(e){reject(e);}
+    });
+  }
+
+  // Prova con PDF, fallback senza
+  _pdfToB64()
+    .then(b64=>_sendWorker(b64))
+    .catch(()=>_sendWorker(null))
+    .then(resp=>{ if(resp&&resp.ok) showSuccess(false); else showSuccess(true); })
+    .catch(()=>showSuccess(true))
+    .finally(()=>{ btn.innerHTML='📤 <span>'+t('invia')+'</span>'; btn.disabled=false; });
 });
 
 function showSuccess(withWarning=false){
