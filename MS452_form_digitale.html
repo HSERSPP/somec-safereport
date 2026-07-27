@@ -1534,12 +1534,11 @@ function drawSignatureSection(doc,y,contentW,margin,white,blue,mid,borderGray){
   doc.rect(margin,y,halfW,sigBoxH,'FD');
   doc.rect(margin+halfW+4,y,halfW,sigBoxH,'FD');
   const canvas=document.getElementById('firma-canvas');
-  const canvasRSPP=document.getElementById('firma-rspp-canvas');
+  const canvasRSPP=null; // firma RSPP rimossa dal form
   function isFE(id){const c=document.getElementById(id);return!c.getContext('2d').getImageData(0,0,c.width,c.height).data.some(v=>v!==0);}
   if(!isFE('firma-canvas')){doc.addImage(canvas.toDataURL('image/png'),'PNG',margin+1,y+1,halfW-2,sigBoxH-2);}
   else{doc.setTextColor(180,180,180);doc.setFontSize(9);doc.setFont('helvetica','italic');doc.text('(non firmato)',margin+halfW/2,y+sigBoxH/2+1,{align:'center'});}
-  if(!isFE('firma-rspp-canvas')){doc.addImage(canvasRSPP.toDataURL('image/png'),'PNG',margin+halfW+5,y+1,halfW-2,sigBoxH-2);}
-  else{doc.setTextColor(180,180,180);doc.setFontSize(9);doc.setFont('helvetica','italic');doc.text('(da completare)',margin+halfW+4+halfW/2,y+sigBoxH/2+1,{align:'center'});}
+  doc.setTextColor(180,180,180);doc.setFontSize(9);doc.setFont('helvetica','italic');doc.text('(da completare in ufficio)',margin+halfW+4+halfW/2,y+sigBoxH/2+1,{align:'center'});
 }
 
 function finalizePDF(doc,proto){
@@ -1760,8 +1759,7 @@ document.getElementById('main-form').addEventListener('submit', function(e){
     function fV(id){const c=document.getElementById(id);return!c.getContext('2d').getImageData(0,0,c.width,c.height).data.some(v=>v!==0);}
     if(!fV('firma-canvas'))doc.addImage(document.getElementById('firma-canvas').toDataURL(),'PNG',M+1,y+1,hW-2,18);
     else{doc.setTextColor(180,180,180);doc.setFontSize(9);doc.setFont('helvetica','italic');doc.text('(non firmato)',M+hW/2,y+11,{align:'center'});}
-    if(!fV('firma-rspp-canvas'))doc.addImage(document.getElementById('firma-rspp-canvas').toDataURL(),'PNG',M+hW+5,y+1,hW-2,18);
-    else{doc.setTextColor(180,180,180);doc.setFontSize(9);doc.setFont('helvetica','italic');doc.text('(da completare)',M+hW+4+hW/2,y+11,{align:'center'});}
+    doc.setTextColor(180,180,180);doc.setFontSize(9);doc.setFont('helvetica','italic');doc.text('(da completare in ufficio)',M+hW+4+hW/2,y+11,{align:'center'});
     // Foto su pagina separata
     if(fotoFiles&&fotoFiles.length>0){
       doc.addPage();y=20;
