@@ -1564,25 +1564,26 @@ document.getElementById('main-form').addEventListener('submit', function(e){
   const btn=document.querySelector('.btn-submit');
   btn.textContent='⏳ '+t('invia')+'...'; btn.disabled=true;
 
-  // Genera PDF in base64 poi invia via Worker con allegato
-  buildPDFBase64().then(pdfBase64 => {
-    const proto = currentProto;
-    const htmlBody = buildEmailHTML(params, proto);
-    return fetch(WORKER_ENDPOINT, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        to: [{email: HSE_EMAIL}],
-        subject: '🚨 [SOMEC SafeReport] MS452-01 — ' + params.tipo_evento + ' — ' + proto,
-        htmlContent: htmlBody,
-        attachment: [{content: pdfBase64, name: 'MS452_' + proto + '.pdf'}]
-      })
-    });
+  // Debug: catch any sync error immediately
+  window.onerror = function(msg,src,line){ 
+    btn.textContent='❌ Errore JS: '+msg+' (L'+line+')'; 
+    btn.disabled=false; 
+    alert('Errore: '+msg+' riga '+line);
+    return true;
+  };
+
+  // Invio via Cloudflare Worker (Brevo)
+  const proto = currentProto;
+  fetch(WORKER_ENDPOINT, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      to: [{email: HSE_EMAIL}],
+      subject: '[SOMEC SafeReport] MS452-01 — ' + params.tipo_evento + ' — ' + proto,
+      htmlContent: buildEmailHTML(params, proto)
+    })
   })
-  .then(resp => {
-    if(resp && resp.ok) showSuccess(false);
-    else showSuccess(true);
-  })
+  .then(() => showSuccess(false))
   .catch(() => showSuccess(true))
   .finally(() => { btn.innerHTML='📤 <span>'+t('invia')+'</span>'; btn.disabled=false; });
 });
