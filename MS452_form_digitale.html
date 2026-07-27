@@ -1603,6 +1603,7 @@ document.getElementById('main-form').addEventListener('submit', function(e){
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
+          sender:{name:'SOMEC SafeReport',email:'som.marco.sterchele@gmail.com'},
           to:[{email:HSE_DIRECT}],
           subject:'[SOMEC SafeReport] '+params.tipo_evento+' — '+params.protocollo,
           htmlContent:_html
