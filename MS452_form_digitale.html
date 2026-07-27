@@ -591,6 +591,8 @@ const EMAILJS_PUBLIC_KEY  = 'DTKDYuVNORzx-J2Jq';
 const EMAILJS_SERVICE_ID  = 'service_nz3f6gr';
 const EMAILJS_TEMPLATE_ID = 'template_z0cc9na';
 const RSPP_EMAIL          = 'marco_sterchele@somecgroup.com';
+const WORKER_URL = 'https://somec-brevo-proxy.som-marco-sterchele.workers.dev';
+const HSE_DIRECT = 'msterchele@somecgroup.com';
 emailjs.init(EMAILJS_PUBLIC_KEY);
 // ═══════════════════════════════════════════════════
 
@@ -1569,7 +1571,10 @@ document.getElementById('main-form').addEventListener('submit', function(e){
   btn.textContent='⏳ '+t('invia')+'...'; btn.disabled=true;
 
   emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params)
-    .then(()=>{ showSuccess(); })
+    .then(()=>{
+      showSuccess();
+      fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:[{email:HSE_DIRECT}],subject:'[SafeReport] '+params.tipo_evento+' — '+params.protocollo,htmlContent:'<p>'+JSON.stringify(params).replace(/,/g,'<br>')+'</p>'})}).catch(()=>{});
+    })
     .catch(()=>{ showSuccess(true); })
     .finally(()=>{ btn.innerHTML='📤 <span>'+t('invia')+'</span>'; btn.disabled=false; });
 });
