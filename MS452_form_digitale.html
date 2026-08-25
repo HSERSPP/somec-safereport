@@ -1713,10 +1713,11 @@ document.getElementById('main-form').addEventListener('submit', function(e){
 
   function _sendWorker(attachment){
     const body = {
-      to:[{email:HSE_DIRECT}],
-      cc: (function(){
+      to: (function(){
         const userEmail = document.getElementById('email').value.trim();
-        return (userEmail && userEmail !== HSE_DIRECT) ? [{email:userEmail}] : [];
+        const recipients = [{email:HSE_DIRECT}];
+        if(userEmail && userEmail !== HSE_DIRECT) recipients.push({email:userEmail});
+        return recipients;
       })(),
       subject:_subject,
       htmlContent:_html
