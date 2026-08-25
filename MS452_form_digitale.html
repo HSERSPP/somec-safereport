@@ -227,31 +227,41 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div class="form-group"><label data-i18n="area">Area / Reparto <span class="req">*</span></label>
       <select id="area" required>
         <option value="">— Seleziona —</option>
-        <optgroup label="🏭 Stabilimento Produzione">
-          <option>R3 — Alluminio / Lavorazioni</option>
-          <option>R4 — Assemblaggio</option>
-          <option>R5 — Magazzino / Spedizione</option>
+        <optgroup label="🏭 Stabilimento — Reparti produttivi">
+          <option>R1 — Uffici</option>
+          <option>R3 — Lavorazione Alluminio</option>
+          <option>R3.1 — Taglio / Assemblaggio Linea 3</option>
+          <option>R4 — Assemblaggio (Linee 1/2/5/6/7)</option>
+          <option>R4 — Show room</option>
+          <option>R5 — Magazzino e Spedizione</option>
+          <option>R5.1 — Area Imballo</option>
           <option>R7 — Carpenteria</option>
-          <option>R8 — Vetreria</option>
-          <option>Uffici stabilimento</option>
-          <option>Piazzale esterno stabilimento</option>
-          <option>Parcheggio stabilimento</option>
+          <option>R8 — Vetreria (taglio/molatura/tempra)</option>
         </optgroup>
-        <optgroup label="🚢 Cantiere / Bordo nave">
-          <option>Bordo nave — interno</option>
-          <option>Bordo nave — coperta</option>
-          <option>Banchina</option>
-          <option>Bacino di carenaggio</option>
-          <option>Pontile / Area ormeggio</option>
-          <option>Magazzino cantiere</option>
-          <option>Area pubblica / condivisa cantiere</option>
-          <option>Piazzale cantiere</option>
-          <option>Uffici cantiere</option>
+        <optgroup label="🔋 Stabilimento — Aree esterne (RE)">
+          <option>RE — Piazzale carico/scarico merci</option>
+          <option>RE — Area stoccaggio rifiuti</option>
+          <option>RE — Parcheggio automezzi</option>
+          <option>RE — Area ricarica carrelli elevatori</option>
         </optgroup>
-        <optgroup label="📦 Logistica / Altro">
-          <option>Magazzino esterno</option>
-          <option>Area carico / scarico</option>
-          <option>Percorso / Viabilità interna</option>
+        <optgroup label="🚢 Cantiere navale — Bordo nave">
+          <option>R2 — Bordo nave (interno)</option>
+          <option>R2 — Bordo nave (coperta/deck)</option>
+          <option>R2 — Spazi confinati / Doppi fondi</option>
+          <option>R2 — Zone in quota / Ponteggi</option>
+        </optgroup>
+        <optgroup label="🚢 Cantiere navale — Aree esterne">
+          <option>R2 — Banchina</option>
+          <option>R2 — Bacino di carenaggio</option>
+          <option>R2 — Pontile / Area ormeggio</option>
+          <option>R2 — Magazzino cantiere</option>
+          <option>R2 — Piazzale cantiere</option>
+          <option>R2 — Area pubblica / condivisa cantiere</option>
+          <option>R2 — Uffici cantiere</option>
+        </optgroup>
+        <optgroup label="🚗 Viabilità / Altro">
+          <option>ST — Strada / Itinere</option>
+          <option>S — Trasversale (intero stabilimento)</option>
           <option>Altro / Non specificato</option>
         </optgroup>
       </select>
@@ -285,33 +295,66 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <label data-i18n="mansione">Mansione <span class="req">*</span></label>
       <select id="mansione" required>
         <option value="">— Seleziona —</option>
-        <optgroup label="🏭 Stabilimento">
-          <option>Operatore alluminio</option>
-          <option>Operatore assemblaggio</option>
-          <option>Operatore carpenteria</option>
-          <option>Operatore vetreria</option>
-          <option>Magazziniere / Logistica</option>
-          <option>Mulettista</option>
-          <option>Manutentore</option>
-          <option>Impiegato / Ufficio</option>
+        <optgroup label="M1 — Impiegato ufficio">
+          <option>M1 — Impiegato (qualità / sistemi / acquisti)</option>
+          <option>M1 — Impiegato (commerciale / marketing)</option>
+          <option>M1 — Impiegato (gestione progetti / R&D)</option>
+          <option>M1 — Impiegato (ufficio tecnico / produzione)</option>
+          <option>M1 — Impiegato (logistica / magazzino)</option>
+          <option>M1 — Impiegato (post-vendita)</option>
         </optgroup>
-        <optgroup label="🚢 Cantiere">
-          <option>Carpentiere navale</option>
-          <option>Saldatore</option>
-          <option>Elettricista</option>
-          <option>Tubista / Pipefitter</option>
-          <option>Falegname / Ebanista</option>
-          <option>Verniciatore</option>
-          <option>Gruista / Operatore sollevamento</option>
-          <option>Ponteggiatore</option>
-          <option>Tecnico specializzato</option>
-          <option>Coordinatore / Capo squadra</option>
+        <optgroup label="M2 — Impiegato tecnico cantieri">
+          <option>M2a — Responsabile di cantiere</option>
+          <option>M2b — Direttore / Coordinatore cantiere</option>
+          <option>M2c — Project Manager</option>
+          <option>M2d — Controllo qualità cantiere</option>
+          <option>M2e — Impiegato logistica / magazzino cantiere</option>
+          <option>M2f — Site Supervisor / Impiegato tecnico</option>
+          <option>M2g — Responsabile di produzione</option>
         </optgroup>
-        <optgroup label="👤 Ruoli trasversali">
-          <option>Supervisore / Preposto</option>
-          <option>Responsabile di cantiere</option>
-          <option>Tecnico HSE</option>
+        <optgroup label="M3 — Addetto lavorazione alluminio (R3)">
+          <option>M3a — Centro di lavoro A (R3)</option>
+          <option>M3b — Centro di lavoro B (R3)</option>
+          <option>M3c — Capo reparto alluminio</option>
+          <option>M3d — Reparto pianali (R3.1)</option>
+        </optgroup>
+        <optgroup label="M4 — Addetto assemblaggio (R4)">
+          <option>M4a — Linea 1/2/5/6/7 assemblaggio</option>
+          <option>M4b — Pianali linea 3</option>
+          <option>M4c — Prototipazione</option>
+        </optgroup>
+        <optgroup label="M5 — Addetto magazzino / logistica (R5)">
+          <option>M5a — Carrellista (carrello elevatore)</option>
+          <option>M5b — Carrellista vetreria</option>
+          <option>M5c — Magazziniere (con mezzo sollevamento)</option>
+          <option>M5d — Magazziniere (senza mezzo sollevamento)</option>
+          <option>M5e — Addetto imballo (sparachiodi)</option>
+        </optgroup>
+        <optgroup label="M6 — Manutentore (trasversale)">
+          <option>M6 — Manutentore (tutti i reparti)</option>
+        </optgroup>
+        <optgroup label="M7 — Addetto carpenteria (R7)">
+          <option>M7a — Saldatore (R7)</option>
+          <option>M7b — Addetto area carpenteria</option>
+        </optgroup>
+        <optgroup label="M8 — Addetto vetreria (R8)">
+          <option>M8a — Capo reparto vetreria</option>
+          <option>M8b — Linea vetrocamera automatica</option>
+          <option>M8c — Sigillatura vetrocamera</option>
+          <option>M8d — Taglio vetri</option>
+          <option>M8e — Molatura vetri</option>
+          <option>M8f — Piega canalini / linea vetrocamera</option>
+          <option>M8g — Vetreria e tempra / molatura</option>
+        </optgroup>
+        <optgroup label="M9 — Posatore in cantiere (R2)">
+          <option>M9a — Posatore (elementi metallici / strutturali)</option>
+          <option>M9b — Posatore (apprestamento / movimentazione materiali)</option>
+        </optgroup>
+        <optgroup label="Ruoli trasversali / Altro">
+          <option>Supervisore / Preposto nominato</option>
+          <option>Responsabile HSE / RSPP</option>
           <option>Visitatore / Ospite</option>
+          <option>Lavoratore di impresa appaltatrice</option>
           <option>Altro</option>
         </optgroup>
       </select>
@@ -375,20 +418,44 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <label data-i18n="dinamica">Dinamica</label>
       <select id="dinamica">
         <option value="">—</option>
-        <option data-i18n-opt="d1">Caduto da (caduta dall'alto)</option>
-        <option data-i18n-opt="d2">Caduto in piano</option>
-        <option data-i18n-opt="d3">Ha urtato contro</option>
-        <option data-i18n-opt="d4">Urtato da</option>
-        <option data-i18n-opt="d5">Schiacciato da</option>
-        <option data-i18n-opt="d6">Investito da</option>
-        <option data-i18n-opt="d7">Impigliato / agganciato</option>
-        <option data-i18n-opt="d8">A contatto con</option>
-        <option data-i18n-opt="d9">Ha inalato</option>
-        <option data-i18n-opt="d10">Esposto a agente fisico/chimico</option>
-        <option data-i18n-opt="d11">Ha messo un piede in fallo</option>
-        <option data-i18n-opt="d12">Movimento scoordinato</option>
-        <option data-i18n-opt="d13">Ha fatto uno sforzo</option>
-        <option data-i18n-opt="altro">Altro</option>
+        <optgroup label="Cadute">
+          <option>Caduto da (caduta dall'alto)</option>
+          <option>Caduto in piano</option>
+          <option>Ha messo un piede in fallo</option>
+          <option>Scivolato su pavimento bagnato / olio / trucioli</option>
+        </optgroup>
+        <optgroup label="Urti e contatti">
+          <option>Ha urtato contro</option>
+          <option>Urtato da</option>
+          <option>A contatto con (superficie tagliente / affilata)</option>
+          <option>A contatto con (superficie calda / ustione)</option>
+          <option>Colpito da oggetto in caduta</option>
+          <option>Colpito da proiezione trucioli / schegge</option>
+        </optgroup>
+        <optgroup label="Impigliamenti e schiacciamenti">
+          <option>Impigliato / agganciato (centro di lavoro)</option>
+          <option>Impigliato / agganciato (linea produzione)</option>
+          <option>Schiacciato da (carico in movimentazione)</option>
+          <option>Schiacciato da (materiale in caduta da scaffale)</option>
+          <option>Investito da (carrello elevatore / transpallet)</option>
+        </optgroup>
+        <optgroup label="Agenti fisici / chimici">
+          <option>Ha inalato (polveri / fumi saldatura)</option>
+          <option>Ha inalato (solventi / primer / sigillanti)</option>
+          <option>Esposto a rumore elevato (> 85 dB)</option>
+          <option>Esposto a agente fisico / vibrazione</option>
+          <option>Ha ingerito</option>
+        </optgroup>
+        <optgroup label="Sforzi e movimenti">
+          <option>Movimento scoordinato</option>
+          <option>Ha fatto uno sforzo (movimentazione manuale carichi)</option>
+          <option>Movimentazione manuale lastra vetro / profilo lungo</option>
+        </optgroup>
+        <optgroup label="Altro">
+          <option>Esplosione / scoppio (bombola / area ricarica)</option>
+          <option>Contatto con impianto elettrico</option>
+          <option>Altro</option>
+        </optgroup>
       </select>
     </div>
     <div class="form-group"><label data-i18n="dinamicaDet">Specificare</label><input type="text" id="dinamica_det"></div>
