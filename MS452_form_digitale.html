@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SOMEC SafeReport — MS452-01</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 :root {
   --blue:#1a4a7a;--blue-mid:#2563a8;--blue-light:#e8f0fa;--blue-border:#b8cfe8;
@@ -703,6 +705,61 @@ const EMAILJS_SERVICE_ID  = 'service_nz3f6gr';
 const EMAILJS_TEMPLATE_ID = 'template_z0cc9na';
 const RSPP_EMAIL          = 'marco_sterchele@somecgroup.com';
 const WORKER_URL = 'https://somec-brevo-proxy.som-marco-sterchele.workers.dev';
+
+// ==========================================
+// FIREBASE — Database HSE Somec
+// ==========================================
+let _fbDB;
+try {
+  if (!firebase.apps.length) firebase.initializeApp({
+    apiKey:"AIzaSyDDwVVkLyfanLnXB58aozMuMRkx1kZPmBg",
+    authDomain:"somec-hse.firebaseapp.com",
+    projectId:"somec-hse",
+    storageBucket:"somec-hse.firebasestorage.app",
+    messagingSenderId:"547746230687",
+    appId:"1:547746230687:web:608c805c18bb1792134daa"
+  });
+  _fbDB = firebase.firestore();
+} catch(e) { console.warn('Firebase N/D:', e.message); }
+
+async function saveSafereportToFirebase(params, tipoEvento, causeSelezionate) {
+  if (!_fbDB) return;
+  try {
+    const now = new Date();
+    const m = now.getMonth() + 1;
+    const trimestre = m<=3?'Q1':m<=6?'Q2':m<=9?'Q3':'Q4';
+    const tipoKey = tipoEvento.toLowerCase().includes('near') ? 'near_miss'
+      : tipoEvento.toLowerCase().includes('infort') ? 'infortunio'
+      : tipoEvento.toLowerCase().includes('lesione') ? 'lesione'
+      : tipoEvento.toLowerCase().includes('emergenza') ? 'emergenza'
+      : 'situazione_pericolosa';
+
+    const doc = {
+      id:              params.protocollo,
+      timestamp:       now.toISOString(),
+      trimestre,
+      anno:            now.getFullYear(),
+      tipo:            tipoKey,
+      sito:            params.cantiere || '',
+      area:            params.area     || '',
+      data_ora:        params.data_ora || '',
+      azienda:         params.azienda  || '',
+      mansione:        params.mansione || '',
+      descrizione:     params.descrizione || '',
+      cause:           causeSelezionate || '',
+      parti_corpo:     params.parti_corpo || '',
+      trattamento:     params.trattamento || '',
+      giorni_prognosi: parseInt(params.prognosi) || 0,
+      dpi_indossati:   params.dpi_ind  || '',
+      formazione:      params.formaz   || '',
+      azioni_ac:       params.azioni_ac || '',
+      stato:           'aperta',
+      geo:             params.geo      || '',
+    };
+    await _fbDB.collection('safereport').doc(params.protocollo).set(doc);
+    console.log('SafeReport salvato su Firebase:', params.protocollo);
+  } catch(e) { console.error('Firebase SafeReport error:', e.message); }
+}
 const HSE_DIRECT = 'msterchele@somecgroup.com';
 // ═══════════════════════════════════════════════════
 
@@ -1644,7 +1701,7 @@ document.getElementById('main-form').addEventListener('submit', function(e){
   const lat=document.getElementById('geo-lat').value, lng=document.getElementById('geo-lng').value;
   const geoText=lat?lat+', '+lng+' (±'+document.getElementById('geo-acc').value+'m)':'Non rilevata';
 
-  const params={
+  let currentParams; const params={
     to_email:RSPP_EMAIL, protocollo:currentProto,
     data_ora:document.getElementById('data').value+' ore '+document.getElementById('ora').value,
     cantiere:document.getElementById('cantiere').value,
@@ -1723,6 +1780,7 @@ document.getElementById('main-form').addEventListener('submit', function(e){
       htmlContent:_html
     };
     if(attachment) body.attachment = [{content:attachment, name:_filename}];
+  currentParams = params;
     return fetch(WORKER_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -1902,6 +1960,12 @@ function showSuccess(withWarning=false){
   localStorage.removeItem(DRAFT_KEY);
   window.scrollTo({top:0,behavior:'smooth'});
   applyTranslations();
+  // Salva su Firebase in background
+  if(typeof currentParams !== 'undefined') {
+    const tipoEvento = document.querySelector('.event-card.selected .ev-label')?.textContent||'';
+    const cause = [...document.querySelectorAll('.cause-item.selected')].map(c=>c.querySelector('span').textContent).join(', ');
+    saveSafereportToFirebase(currentParams, tipoEvento, cause);
+  }
 }
 
 function resetForm(){
