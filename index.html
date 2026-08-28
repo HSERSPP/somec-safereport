@@ -713,6 +713,7 @@ const WORKER_URL = 'https://somec-brevo-proxy.som-marco-sterchele.workers.dev';
 // FIREBASE — Database HSE Somec
 // ==========================================
 let _fbDB;
+let currentParams = null;  // variabile globale per Firebase in showSuccess
 try {
   if (!firebase.apps.length) firebase.initializeApp({
     apiKey:"AIzaSyDDwVVkLyfanLnXB58aozMuMRkx1kZPmBg",
@@ -1704,7 +1705,7 @@ document.getElementById('main-form').addEventListener('submit', function(e){
   const lat=document.getElementById('geo-lat').value, lng=document.getElementById('geo-lng').value;
   const geoText=lat?lat+', '+lng+' (±'+document.getElementById('geo-acc').value+'m)':'Non rilevata';
 
-  let currentParams; const params={
+  currentParams = null; const params={
     to_email:RSPP_EMAIL, protocollo:currentProto,
     data_ora:document.getElementById('data').value+' ore '+document.getElementById('ora').value,
     cantiere:document.getElementById('cantiere').value,
@@ -1964,10 +1965,11 @@ function showSuccess(withWarning=false){
   window.scrollTo({top:0,behavior:'smooth'});
   applyTranslations();
   // Salva su Firebase in background
-  if(typeof currentParams !== 'undefined') {
+  if(currentParams) {
     const tipoEvento = document.querySelector('.event-card.selected .ev-label')?.textContent||'';
-    const cause = [...document.querySelectorAll('.cause-item.selected')].map(c=>c.querySelector('span').textContent).join(', ');
+    const cause = [...document.querySelectorAll('.cause-item.selected')].map(c=>c.querySelector('span')?.textContent||'').join(', ');
     saveSafereportToFirebase(currentParams, tipoEvento, cause);
+    currentParams = null; // reset dopo il salvataggio
   }
 }
 
