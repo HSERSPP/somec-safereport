@@ -278,7 +278,28 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray-bg);color
   </div>
 </div>
 
-<!-- MODAL GESTIONE OBS -->
+<!-- MODAL CHIUSURA SEGNALAZIONE HSE -->
+<div class="modal-overlay" id="modal-segn">
+  <div class="modal">
+    <div class="modal-header">✅ Chiudi Segnalazione HSE<button class="modal-close" onclick="closeModalSegn()">×</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;margin-bottom:12px">Stai per segnare come <strong>CHIUSA</strong> la seguente segnalazione:</p>
+      <div id="modal-segn-text" style="font-size:12px;background:#f4f5f7;padding:10px;border-radius:6px;margin-bottom:12px"></div>
+      <div class="filter-group" style="flex-direction:column;align-items:flex-start;gap:4px">
+        <label style="font-size:11px;font-weight:700;color:var(--gray-mid);text-transform:uppercase">Data chiusura</label>
+        <input type="date" id="modal-segn-data" style="border:1px solid var(--gray-border);border-radius:6px;padding:7px 10px;font-size:13px;font-family:inherit;width:100%">
+      </div>
+      <div class="filter-group" style="flex-direction:column;align-items:flex-start;gap:4px;margin-top:10px">
+        <label style="font-size:11px;font-weight:700;color:var(--gray-mid);text-transform:uppercase">Come è stata risolta</label>
+        <textarea id="modal-segn-nota" style="border:1px solid var(--gray-border);border-radius:6px;padding:7px 10px;font-size:12px;font-family:inherit;width:100%;min-height:60px;resize:vertical" placeholder="Descrivi l'azione intrapresa e come è stata risolta..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-action btn-blue" onclick="closeModalSegn()">Annulla</button>
+      <button class="btn-action btn-green" onclick="confirmChiusuraSegn()">✅ Conferma chiusura</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="modal-obs">
   <div class="modal">
     <div class="modal-header" id="modal-obs-header">👁 Gestione Osservazione<button class="modal-close" onclick="closeModalOBS()">×</button></div>
@@ -393,10 +414,27 @@ async function loadData() {
     }
     if (sito!=='ALL'){qA=qA.where('sito','==',sito);qS=qS.where('sito','==',sito);qP=qP.where('sito','==',sito);}
 
-    const [ra,rs,rp] = await Promise.all([qA.get(),qS.get(),qP.get()]);
+    // Le segnalazioni HSE le carichiamo SEMPRE per tutto l'anno (multi-trimestre)
+    // cosi nel tab AC si vedono tutte le aperte indipendentemente dal periodo
+    let qSAll = db.collection('safereport').where('anno','==',anno);
+    if (sito!=='ALL') qSAll = qSAll.where('sito','==',sito);
+    // Includi anche anno precedente per segnalazioni aperte da Q4 2025
+    let qSPrev = db.collection('safereport').where('anno','==',anno-1);
+    if (sito!=='ALL') qSPrev = qSPrev.where('sito','==',sito);
+
+    const [ra,rs,rp,rSAll,rSPrev,rSpiSto] = await Promise.all([
+      qA.get(),qS.get(),qP.get(),qSAll.get(),qSPrev.get(),
+      db.collection('spi_storico').where('anno','==',anno).get()
+    ]);
     DATA.audits      = ra.docs.map(d=>({...d.data(),_id:d.id}));
     DATA.safereports = rs.docs.map(d=>({...d.data(),_id:d.id}));
     DATA.preposti    = rp.docs.map(d=>({...d.data(),_id:d.id}));
+    DATA.spi_storico = rSpiSto.docs.map(d=>d.data());
+    // Array completo per tab AC (tutto l'anno + anno precedente)
+    const allIds = new Set();
+    DATA.safereports_all = [...rSAll.docs,...rSPrev.docs]
+      .filter(d=>{ if(allIds.has(d.id)) return false; allIds.add(d.id); return true; })
+      .map(d=>({...d.data(),_id:d.id}));
 
     // Carica anche trend (tutti i trimestri dell'anno)
     await loadTrendData(anno, sito);
@@ -566,8 +604,12 @@ function renderSPI(anno,trim,sito) {
   if(!evRec.length) html+='<tr><td colspan="5" style="text-align:center;color:var(--gray-mid)">Nessuna segnalazione.</td></tr>';
   else evRec.forEach(e=>{html+=`<tr><td><code style="font-size:10px">${e.id||'—'}</code></td><td>${tipoL[e.tipo]||e.tipo||'—'}</td><td>${(e.sito||'—').split(' ')[0]}</td><td>${(e.data_ora||'—').substring(0,10)}</td><td><span class="badge ${e.stato==='chiusa'?'ottimo':'insufficiente'}">${e.stato||'aperta'}</span></td></tr>`;});
   html+='</tbody></table></div>';
+  html+=`<div id="speedometer-section-spi"></div>`;
 
   document.getElementById('spi-content').innerHTML=html;
+
+  // Renderizza speedometer dopo aver inserito l'HTML
+  renderSpeedometerInto('speedometer-section-spi', sito);
 }
 
 // ── TREND ─────────────────────────────────────────────────
@@ -624,7 +666,8 @@ function renderTrend() {
       }).join('')}
       </tbody>
     </table>
-    </div>`;
+    </div>
+    <div id="speedometer-section"></div>`;
 
   // Distruggi chart esistenti
   if (chartTrend) chartTrend.destroy();
@@ -662,9 +705,191 @@ function renderTrend() {
     },
     options:{responsive:true,plugins:{legend:{labels:{font:{size:11},boxWidth:14}}},scales:{y:{beginAtZero:true,grid:{color:'#f0f2f5'},ticks:{color:'#7a8090',font:{size:11}}},x:{grid:{display:false},ticks:{color:'#7a8090',font:{size:11}}}}}
   });
+  renderSpeedometer();
 }
 
-// ── AZIONI CORRETTIVE ─────────────────────────────────────
+// ── STRUTTURA CANTIERI E FORNITORI (da speedometer v5) ────
+const CANTIERI_CONFIG = [
+  {nome:'Genova',     sito:'Genova (Fincantieri)',
+   fornitori:['Giemmeci','HB Montaggi','Macris']},
+  {nome:'Marghera',   sito:'Marghera (Fincantieri)',
+   fornitori:['Technik','Solanord']},
+  {nome:'Monfalcone', sito:'Monfalcone (Fincantieri)',
+   fornitori:['Sotrade','PLG','TSM','EJ-ER']},
+  {nome:'Turku',      sito:'Turku (Meyer)',
+   fornitori:['Sotrade','SVM','Finistratum','Fabrilis','Falmot','TKY','Novus']},
+  {nome:'Saint-Nazaire',sito:"Saint-Nazaire (Chantiers de l'Atlantique)",
+   fornitori:['Technik','Borhan']},
+  {nome:'Papenburg',  sito:'Papenburg (Meyer Werft)',
+   fornitori:['Technik','GC Nautica']},
+];
+
+function drawSpeedSVG(voto, nome, isNE) {
+  const w=200, h=130, cx=100, cy=105, Ro=85, Ri=52;
+  const BANDS_SVG = [
+    {lo:0,  hi:20,  color:'#c0392b'},
+    {lo:20, hi:40,  color:'#e67e22'},
+    {lo:40, hi:60,  color:'#f1c40f'},
+    {lo:60, hi:70,  color:'#a9d18e'},
+    {lo:70, hi:83,  color:'#70ad47'},
+    {lo:83, hi:100, color:'#375623'},
+  ];
+  const polarX = (r,deg) => cx + r*Math.cos((deg)*Math.PI/180);
+  const polarY = (r,deg) => cy + r*Math.sin((deg)*Math.PI/180);
+  // angolo: 180° = sinistra (0), 360°=destra (100)
+  const valToAngle = v => 180 + (v/100)*180;
+
+  let arcs = '';
+  BANDS_SVG.forEach(b => {
+    const a0 = valToAngle(b.lo), a1 = valToAngle(b.hi);
+    const x1=polarX(Ro,a0),y1=polarY(Ro,a0);
+    const x2=polarX(Ro,a1),y2=polarY(Ro,a1);
+    const xi1=polarX(Ri,a0),yi1=polarY(Ri,a0);
+    const xi2=polarX(Ri,a1),yi2=polarY(Ri,a1);
+    const large = (a1-a0)>180?1:0;
+    const col = isNE ? '#d0d0d0' : b.color;
+    arcs += `<path d="M${x1.toFixed(1)},${y1.toFixed(1)} A${Ro},${Ro} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} L${xi2.toFixed(1)},${yi2.toFixed(1)} A${Ri},${Ri} 0 ${large},0 ${xi1.toFixed(1)},${yi1.toFixed(1)} Z" fill="${col}"/>`;
+  });
+
+  // Linee di separazione bande
+  let lines = '';
+  [0,20,40,60,70,83,100].forEach(v => {
+    const a=valToAngle(v);
+    lines += `<line x1="${polarX(Ri-2,a).toFixed(1)}" y1="${polarY(Ri-2,a).toFixed(1)}" x2="${polarX(Ro+2,a).toFixed(1)}" y2="${polarY(Ro+2,a).toFixed(1)}" stroke="white" stroke-width="2"/>`;
+  });
+
+  // Cerchio interno bianco
+  const circle = `<circle cx="${cx}" cy="${cy}" r="${Ri}" fill="white"/>`;
+
+  // Ago
+  let needle = '';
+  if (!isNE && voto !== null) {
+    const a = valToAngle(Math.max(0,Math.min(100,voto)));
+    const nx=polarX(Ro-6,a), ny=polarY(Ro-6,a);
+    const p1x=polarX(8,a+90), p1y=polarY(8,a+90);
+    const p2x=polarX(8,a-90), p2y=polarY(8,a-90);
+    needle = `<polygon points="${nx.toFixed(1)},${ny.toFixed(1)} ${p1x.toFixed(1)},${p1y.toFixed(1)} ${p2x.toFixed(1)},${p2y.toFixed(1)}" fill="#003366"/>`;
+  }
+  const hub = `<circle cx="${cx}" cy="${cy}" r="7" fill="#003366"/><circle cx="${cx}" cy="${cy}" r="4" fill="white"/>`;
+
+  // Testo valore
+  const valText = isNE
+    ? `<text x="${cx}" y="${cy-12}" text-anchor="middle" font-size="13" font-weight="bold" fill="#aaa">N.E.</text>`
+    : `<text x="${cx}" y="${cy-12}" text-anchor="middle" font-size="16" font-weight="bold" fill="#003366">${voto}</text>`;
+
+  // Nome soggetto (max 22 char)
+  const nomeShort = nome.length>22 ? nome.substring(0,21)+'…' : nome;
+  const nomeText = `<text x="${cx}" y="${cy+14}" text-anchor="middle" font-size="9" fill="#555">${nomeShort}</text>`;
+
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+    ${arcs}${lines}${circle}${needle}${hub}${valText}${nomeText}
+  </svg>`;
+}
+
+function renderSpeedometer() {
+  renderSpeedometerInto('speedometer-section', 'ALL');
+}
+
+function renderSpeedometerInto(targetId, sitoFiltro) {
+  const sec = document.getElementById(targetId);
+  if (!sec) return;
+
+  // Calcola voto per sito/impresa dagli audit caricati in DATA_TREND
+  const getVoto = (sito, impresa) => {
+    let auditsTot = [], srTot = [], prTot = [];
+    TRIMESTRI.forEach(q => {
+      const d = DATA_TREND[q]; if (!d) return;
+      if (impresa) {
+        auditsTot = [...auditsTot, ...d.audits.filter(a =>
+          a.sito===sito && (a.impresa||'').toLowerCase().includes(impresa.toLowerCase())
+        )];
+      } else {
+        auditsTot = [...auditsTot, ...d.audits.filter(a =>
+          a.sito===sito && (a.impresa||'').toLowerCase().includes('somec')
+        )];
+      }
+      srTot = [...srTot, ...d.safereports.filter(s=>s.sito===sito)];
+      prTot = [...prTot, ...d.preposti.filter(p=>p.sito===sito)];
+    });
+
+    // Se ho audit diretti, calcolo da quelli
+    if (auditsTot.length) {
+      return calcVoto(calcSPI(auditsTot, srTot, prTot));
+    }
+
+    // Fallback: leggo voto da spi_storico (dati importati dall'Excel)
+    if (DATA.spi_storico && DATA.spi_storico.length) {
+      const anno = parseInt(document.getElementById('f-anno').value);
+      const trim = document.getElementById('f-trim').value;
+      // Cerca per sito e impresa nel periodo
+      const match = DATA.spi_storico.filter(r => {
+        const sitoMatch = (r.sito||'').toLowerCase().includes(sito.split('(')[0].trim().toLowerCase());
+        const annoMatch = r.anno === anno;
+        const trimMatch = trim === 'ANNO' || r.trimestre === trim;
+        const impresaMatch = impresa
+          ? (r.impresa||'').toLowerCase().includes(impresa.toLowerCase())
+          : (r.impresa||'').toLowerCase().includes('somec');
+        return sitoMatch && annoMatch && trimMatch && impresaMatch;
+      });
+      if (match.length && match[0].voto !== null) return match[0].voto;
+    }
+    return null;
+  };
+
+  let html = `<div class="section-title" style="margin-top:24px">🎯 Speedometer SPI — Per Cantiere e Soggetto</div>`;
+
+  // Stabilimento — mostra sempre se sito=ALL o sito=Stabilimento
+  if (sitoFiltro==='ALL' || sitoFiltro==='Stabilimento Somec -- sede principale') {
+    const votoStab = (() => {
+      let a=[], sr=[], pr=[];
+      TRIMESTRI.forEach(q=>{
+        const d=DATA_TREND[q]; if(!d) return;
+        a=[...a,...d.audits.filter(x=>x.sito==='Stabilimento Somec -- sede principale')];
+        sr=[...sr,...d.safereports.filter(x=>x.sito==='Stabilimento Somec -- sede principale')];
+        pr=[...pr,...d.preposti.filter(x=>x.sito==='Stabilimento Somec -- sede principale')];
+      });
+      if(!a.length&&!sr.length&&!pr.length) return null;
+      return calcVoto(calcSPI(a,sr,pr));
+    })();
+    html += `<div style="background:#fff;border-radius:8px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:#1a4a7a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;border-bottom:2px solid #1a4a7a;padding-bottom:6px">🏭 Stabilimento Somec</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <div>${drawSpeedSVG(votoStab??0,'Somec Stabilimento',votoStab===null)}</div>
+      </div>
+    </div>`;
+  }
+
+  // Cantieri — filtra se sito specifico
+  const cantieriFiltrati = sitoFiltro==='ALL'
+    ? CANTIERI_CONFIG
+    : CANTIERI_CONFIG.filter(c=>c.sito===sitoFiltro);
+
+  cantieriFiltrati.forEach(c => {
+    const votoSomec = getVoto(c.sito, null);
+    const fornHtml = c.fornitori.map(f => {
+      const v = getVoto(c.sito, f);
+      return `<div>${drawSpeedSVG(v??0,f,v===null)}</div>`;
+    }).join('');
+
+    html += `<div style="background:#fff;border-radius:8px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:#1a4a7a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;border-bottom:2px solid #1a4a7a;padding-bottom:6px">🚢 ${c.nome}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start">
+        <div style="border-right:2px solid #f0f2f5;padding-right:12px;margin-right:4px">
+          ${drawSpeedSVG(votoSomec??0,'Somec – '+c.nome,votoSomec===null)}
+        </div>
+        ${fornHtml}
+      </div>
+    </div>`;
+  });
+
+  if (!cantieriFiltrati.length && sitoFiltro!=='ALL' && sitoFiltro!=='Stabilimento Somec -- sede principale') {
+    html += '<div class="empty-state">Nessun cantiere corrisponde al filtro selezionato.</div>';
+  }
+
+  sec.innerHTML = html;
+}
+
+
 function renderAC() {
   const cont = document.getElementById('ac-content');
   const oggi = new Date().toISOString().slice(0,10);
@@ -790,15 +1015,15 @@ function renderAC() {
   }
   html += '</tbody></table></div>';
 
-  // ── SEZIONE 5: SEGNALAZIONI RSPP APERTE ──
-  const rsppAperte = DATA.safereports.filter(s=>
-    (s.fonte==='rspp_import'||s.segnalato_da?.includes('RSPP')) &&
+  // ── SEZIONE 5: SEGNALAZIONI HSE APERTE ──
+  // Usa safereports_all = tutto l'anno + anno precedente, indipendentemente dal trimestre
+  const srAll = DATA.safereports_all || DATA.safereports;
+  const rsppAperte = srAll.filter(s=>
     s.tipo!=='infortunio' && s.tipo!=='near_miss' &&
     s.stato!=='chiusa'
   ).sort((a,b)=>(a.data_ora||'').localeCompare(b.data_ora||''));
 
-  const rsppChiuse = DATA.safereports.filter(s=>
-    (s.fonte==='rspp_import'||s.segnalato_da?.includes('RSPP')) &&
+  const rsppChiuse = srAll.filter(s=>
     s.tipo!=='infortunio' && s.tipo!=='near_miss' &&
     s.stato==='chiusa'
   ).sort((a,b)=>(b.data_chiusura||'').localeCompare(a.data_chiusura||''));
@@ -809,39 +1034,60 @@ function renderAC() {
     near_miss:'🚨 Near Miss',
   }[t]||t);
 
-  html += `<div class="section-title" style="margin-top:20px">📧 Segnalazioni RSPP Aperte (${rsppAperte.length})</div>
+  // Mappa segnalante leggibile dall'email o dal campo segnalato_da
+  const getSegnalante = s => {
+    if (s.segnalato_da && s.segnalato_da !== 'Marco Sterchele (RSPP)') return s.segnalato_da;
+    if (s.fonte === 'rspp_import') return 'Marco Sterchele (RSPP)';
+    if (s.fonte === 'app') return s.azienda ? s.azienda + ' — operatore' : 'Operatore';
+    // Mappa destinatari noti come segnalanti nelle email
+    const dest = s.destinatario || '';
+    if (dest.includes('Bettin')) return 'Adriano Bettin (Preposto)';
+    if (dest.includes('Apolloni')) return 'Ruggero Apolloni (Resp. Produzione)';
+    if (dest.includes('Fardin')) return 'Alessandro Fardin (Preposto Vetreria)';
+    if (dest.includes('d Amico') || dest.includes("d'Amico")) return "Pietro d'Amico (Imballo)";
+    if (dest.includes('Mion') || dest.includes('Mosole')) return 'Mion Mosole (Foges)';
+    if (dest.includes('Mignot')) return 'Marco Sterchele (RSPP)';
+    if (dest.includes('Segale')) return 'Andrea Segale (Preposto)';
+    return s.segnalato_da || 'Marco Sterchele (RSPP)';
+  };
+
+  html += `<div class="section-title" style="margin-top:20px">📧 Segnalazioni HSE Aperte (${rsppAperte.length})</div>
   <div class="table-card"><table class="data-table">
-    <thead><tr><th>Data</th><th>Tipo</th><th>Descrizione</th><th>Destinatario</th><th>Scadenza</th></tr></thead>
+    <thead><tr><th>Data</th><th>Tipo</th><th>Descrizione</th><th>Segnalato da</th><th>Destinatario</th><th>Scadenza</th><th>Azione</th></tr></thead>
     <tbody>`;
   if (!rsppAperte.length) {
-    html += '<tr><td colspan="5" style="text-align:center;color:var(--gray-mid);padding:16px">Nessuna segnalazione RSPP aperta.</td></tr>';
+    html += '<tr><td colspan="7" style="text-align:center;color:var(--gray-mid);padding:16px">Nessuna segnalazione HSE aperta.</td></tr>';
   } else {
     rsppAperte.forEach(s => {
       const scad = s.scadenza || '—';
       const scadStyle = scad!=='—' && scad < oggi ? 'color:var(--red);font-weight:700' : '';
+      const descSafe = (s.descrizione||'').substring(0,60).replace(/'/g,"\\'");
       html += `<tr>
         <td style="white-space:nowrap">${(s.data_ora||'—').substring(0,10)}</td>
         <td>${tipoRsppLabel(s.tipo)}</td>
-        <td style="font-size:11px">${(s.descrizione||'—').substring(0,120)}...</td>
+        <td style="font-size:11px">${(s.descrizione||'—').substring(0,100)}...</td>
+        <td style="font-size:11px;color:var(--blue)">${getSegnalante(s)}</td>
         <td style="font-size:11px">${s.destinatario||'—'}</td>
         <td style="${scadStyle}">${scad}</td>
+        <td><button class="btn-chiudi" onclick="apriModalSegn('${s._id||s.id}','${descSafe}')">Chiudi</button></td>
       </tr>`;
     });
   }
   html += '</tbody></table></div>';
 
-  html += `<div class="section-title" style="margin-top:20px">✅ Segnalazioni RSPP Chiuse (${rsppChiuse.length})</div>
+  html += `<div class="section-title" style="margin-top:20px">✅ Segnalazioni HSE Chiuse (${rsppChiuse.length})</div>
   <div class="table-card"><table class="data-table">
-    <thead><tr><th>Data</th><th>Tipo</th><th>Descrizione</th><th>Data chiusura</th><th>Come risolta</th></tr></thead>
+    <thead><tr><th>Data</th><th>Tipo</th><th>Descrizione</th><th>Segnalato da</th><th>Data chiusura</th><th>Come risolta</th></tr></thead>
     <tbody>`;
   if (!rsppChiuse.length) {
-    html += '<tr><td colspan="5" style="text-align:center;color:var(--gray-mid);padding:16px">Nessuna segnalazione chiusa.</td></tr>';
+    html += '<tr><td colspan="6" style="text-align:center;color:var(--gray-mid);padding:16px">Nessuna segnalazione chiusa.</td></tr>';
   } else {
     rsppChiuse.forEach(s => {
       html += `<tr>
         <td style="white-space:nowrap">${(s.data_ora||'—').substring(0,10)}</td>
         <td>${tipoRsppLabel(s.tipo)}</td>
         <td style="font-size:11px">${(s.descrizione||'—').substring(0,100)}...</td>
+        <td style="font-size:11px;color:var(--blue)">${getSegnalante(s)}</td>
         <td style="color:var(--green);font-weight:700;white-space:nowrap">${s.data_chiusura||'—'}</td>
         <td style="font-size:11px;font-style:italic;color:var(--gray-mid)">${(s.nota_chiusura||'—').substring(0,100)}</td>
       </tr>`;
@@ -852,7 +1098,41 @@ function renderAC() {
   cont.innerHTML = html;
 }
 
-let pendingOBS = null;
+let pendingSegn = null;
+
+function apriModalSegn(id, testo) {
+  pendingSegn = id;
+  document.getElementById('modal-segn-text').textContent = testo;
+  document.getElementById('modal-segn-data').value = new Date().toISOString().slice(0,10);
+  document.getElementById('modal-segn-nota').value = '';
+  document.getElementById('modal-segn').classList.add('show');
+}
+
+function closeModalSegn() {
+  document.getElementById('modal-segn').classList.remove('show');
+  pendingSegn = null;
+}
+
+async function confirmChiusuraSegn() {
+  if (!pendingSegn) return;
+  const data = document.getElementById('modal-segn-data').value;
+  const nota = document.getElementById('modal-segn-nota').value;
+  if (!data) { showToast('⚠️ Inserisci la data di chiusura'); return; }
+  try {
+    await db.collection('safereport').doc(pendingSegn).update({
+      stato: 'chiusa',
+      data_chiusura: data,
+      nota_chiusura: nota,
+    });
+    showToast('✅ Segnalazione chiusa');
+    closeModalSegn();
+    // Aggiorna localmente
+    const sr = DATA.safereports_all || DATA.safereports;
+    const idx = sr.findIndex(s=>(s._id||s.id)===pendingSegn);
+    if (idx>=0) { sr[idx].stato='chiusa'; sr[idx].data_chiusura=data; sr[idx].nota_chiusura=nota; }
+    renderAC();
+  } catch(e) { showToast('❌ Errore: '+e.message); }
+}
 
 function apriModalOBS(auditId, voceId, testo, stato) {
   pendingOBS = {auditId, voceId, stato};
