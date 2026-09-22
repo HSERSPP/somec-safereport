@@ -1097,17 +1097,23 @@ function generatePDF(){
   };
 
   // Row in tabella: label(bold) | value
+  // Calcola in anticipo il numero di righe necessarie e restituisce l'altezza
+  // effettivamente usata (>= h richiesta) così il chiamante può avanzare y
+  // senza che il testo lungo fuoriesca/invada la riga successiva.
   const tableRow=(label,value,rowY,h,colW)=>{
     const cw=colW||contentW;
-    doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
-    doc.rect(margin,rowY,cw,h,'S');
-    doc.setFillColor(...grayBg); doc.rect(margin,rowY,50,h,'F');
-    doc.setDrawColor(...borderGray); doc.line(margin+50,rowY,margin+50,rowY+h);
-    doc.setTextColor(...blue); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
-    doc.text(label.toUpperCase(),margin+2,rowY+h/2+1.5);
-    doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
     const lines=doc.splitTextToSize(String(value||'—'),cw-53);
-    doc.text(lines,margin+52,rowY+h/2-((lines.length-1)*2.5)+1.5);
+    const rowH=Math.max(h||7, lines.length*4.2+3.2);
+    doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
+    doc.rect(margin,rowY,cw,rowH,'S');
+    doc.setFillColor(...grayBg); doc.rect(margin,rowY,50,rowH,'F');
+    doc.setDrawColor(...borderGray); doc.line(margin+50,rowY,margin+50,rowY+rowH);
+    doc.setTextColor(...blue); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text(label.toUpperCase(),margin+2,rowY+(lines.length>1?7:rowH)/2+1.5);
+    doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text(lines,margin+52,rowY+rowH/2-((lines.length-1)*2.1)+1.5);
+    return rowH;
   };
 
   // Section header (dark blue band like original)
@@ -1187,12 +1193,12 @@ function generatePDF(){
   doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(9);
   doc.text(document.getElementById('ora').value||'—',margin+col2W+32,y+5);
   y+=7;
-  tableRow('Cantiere / Sito',document.getElementById('cantiere').value,y,7);y+=7;
-  tableRow('Area / Reparto',document.getElementById('area').value,y,7);y+=7;
+  y+=tableRow('Cantiere / Sito',document.getElementById('cantiere').value,y,7);
+  y+=tableRow('Area / Reparto',document.getElementById('area').value,y,7);
   const macchVal=document.getElementById('macchina').value;
-  if(macchVal){tableRow('Macchina / Attrezzatura',macchVal,y,7);y+=7;}
+  if(macchVal){y+=tableRow('Macchina / Attrezzatura',macchVal,y,7);}
   const lat=document.getElementById('geo-lat').value,lng=document.getElementById('geo-lng').value,acc=document.getElementById('geo-acc').value;
-  if(lat){tableRow('GPS',lat+', '+lng+(acc?' (±'+acc+'m)':'')+' — google.com/maps?q='+lat+','+lng,y,7);y+=7;}
+  if(lat){y+=tableRow('GPS',lat+', '+lng+(acc?' (±'+acc+'m)':'')+' — google.com/maps?q='+lat+','+lng,y,7);}
   y+=3;
 
   // ── SEZIONE 2: PERSONA COINVOLTA ──
@@ -1231,7 +1237,7 @@ function generatePDF(){
 
   // ── SEZIONE 3: TIPO EVENTO + CHECKBOXES ──
   checkY(35);
-  y=sectionHeader('3 — TIPO DI EVENTO / CLASSIFICAZIONE',y)+2;
+  y=sectionHeader('3 — TIPO DI EVENTO / CLASSIFICAZIONE',y)+5;
   const eventi=[
     {key:'near-miss',label:'MANCATO INFORTUNIO (Near Miss)'},
     {key:'pericolosa',label:'SITUAZIONE PERICOLOSA (potrebbe succedere qualcosa)'},
@@ -1260,11 +1266,12 @@ function generatePDF(){
   checkY(45);
   y=sectionHeader('4 — '+t('s4').toUpperCase(),y)+1;
   const descVal=document.getElementById('descrizione').value||'—';
-  const descLines=doc.splitTextToSize(descVal,contentW-4);
-  const descH=Math.max(20,descLines.length*4.5+4);
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); // font impostato PRIMA di misurare il wrap del testo
+  const descLines=doc.splitTextToSize(descVal,contentW-6);
+  const descH=Math.max(20,descLines.length*4.5+5);
   doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,descH,'S');
   doc.setTextColor(...dark); doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text(descLines,margin+2,y+5);
+  doc.text(descLines,margin+2,y+5.5);
   y+=descH+2;
 
   // Dinamica + corpo
@@ -1297,21 +1304,32 @@ function generatePDF(){
   doc.rect(bodyX,y,bodyW,secH,'S');
   // Checkboxes dinamiche 2 colonne
   const dinHalfW=dinW/2;
+  let dinAnyMatch=false;
   dinamicheList.forEach((d,i)=>{
     const col=i<7?0:1;
     const row=i<7?i:i-7;
     const cx=margin+2+col*dinHalfW;
     const cy=y+5+row*6;
     const dinMatch = selectedDin && (selectedDin === d || selectedDin.includes(d.split(' ')[0]+' '+d.split(' ')[1]));
+    if(dinMatch) dinAnyMatch=true;
     doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
     doc.rect(cx,cy-3,4,4,'FD');
     if(dinMatch){ doc.setFillColor(...blue); doc.rect(cx+0.8,cy-2.2,2.4,2.4,'F'); }
     doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
     doc.text(d,cx+5.5,cy);
   });
-  if(dinDet){
+  // Se la dinamica selezionata (es. "Altro", o una voce non presente nell'elenco
+  // fisso sopra) non corrisponde a nessuna checkbox, la mostriamo comunque come testo,
+  // altrimenti in PDF non compariva nulla.
+  let dinExtraLine=null;
+  if(selectedDin && !dinAnyMatch){
+    dinExtraLine='Dinamica indicata: '+selectedDin;
+  }
+  if(dinExtraLine || dinDet){
     doc.setTextColor(...mid); doc.setFontSize(7.5); doc.setFont('helvetica','italic');
-    doc.text('Specificare: '+dinDet,margin+2,y+secH-2);
+    const dinNoteParts=[dinExtraLine, dinDet?('Specificare: '+dinDet):null].filter(Boolean);
+    const dinNoteLines=doc.splitTextToSize(dinNoteParts.join(' — '),dinW-4);
+    doc.text(dinNoteLines,margin+2,y+secH-1-((dinNoteLines.length-1)*3));
   }
   // Corpo anatomico fedele all'originale — vista frontale
   const figX=bodyX+bodyW*0.3, figY=y+2, scale=1.0;
@@ -1458,11 +1476,12 @@ function generatePDF(){
   // ── SEZIONE 5: TRATTAMENTO ──
   y=sectionHeader('5 — '+t('s7').toUpperCase(),y)+1;
   const trattVal=document.getElementById('trattamento').value||'—';
-  const trattLines=doc.splitTextToSize(trattVal,contentW-4);
-  const trattH=Math.max(14,trattLines.length*4.5+4);
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); // font impostato PRIMA di misurare il wrap del testo
+  const trattLines=doc.splitTextToSize(trattVal,contentW-6);
+  const trattH=Math.max(14,trattLines.length*4.5+5);
   doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,trattH,'S');
   doc.setTextColor(...dark); doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text(trattLines,margin+2,y+5);
+  doc.text(trattLines,margin+2,y+5.5);
   y+=trattH+2;
 
   // INFORTUNIO box
@@ -1532,9 +1551,12 @@ function generatePDF(){
 
   // NC
   const ncVal=document.getElementById('nc_desc').value;
-  checkY(16);
-  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,14,'S');
-  doc.setFillColor(...grayBg); doc.rect(margin,y,40,14,'F'); doc.line(margin+40,y,margin+40,y+14);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); // font impostato PRIMA di misurare il wrap
+  const ncLines=ncVal?doc.splitTextToSize(ncVal,contentW-44):['Nessuna'];
+  const ncH=Math.max(14,ncLines.length*4.2+9);
+  checkY(ncH+2);
+  doc.setDrawColor(...borderGray); doc.rect(margin,y,contentW,ncH,'S');
+  doc.setFillColor(...grayBg); doc.rect(margin,y,40,ncH,'F'); doc.line(margin+40,y,margin+40,y+ncH);
   doc.setTextColor(...blue); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
   doc.text('NC RILEVATA:',margin+2,y+5);
   doc.setFillColor(255,255,255); doc.setDrawColor(...borderGray); doc.setLineWidth(LW);
@@ -1543,9 +1565,9 @@ function generatePDF(){
   doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica','normal');
   doc.text('Si - Descrizione:',margin+7.5,y+9.5);
   doc.setTextColor(...dark); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-  if(ncVal) doc.text(ncVal,margin+42,y+9);
+  if(ncVal){ doc.text(ncLines,margin+42,y+9); }
   else { doc.setTextColor(...mid); doc.text('Nessuna',margin+42,y+9); }
-  y+=16;
+  y+=ncH+2;
 
   // ── SEZIONE 7: AZIONI CORRETTIVE ──
   checkY(25);
@@ -1616,10 +1638,10 @@ function generatePDF(){
   y+=8;
 
   // Compilatore
-  tableRow('Segnalato da',document.getElementById('compilatore').value+' ('+document.getElementById('email').value+')',y,7);
-  y+=7;
+  checkY(20);
+  y+=tableRow('Segnalato da',document.getElementById('compilatore').value+' ('+document.getElementById('email').value+')',y,7);
   const noteVal=document.getElementById('note_finali').value;
-  if(noteVal){tableRow('Note finali',noteVal,y,7);y+=7;}
+  if(noteVal){ checkY(20); y+=tableRow('Note finali',noteVal,y,7); }
   y+=3;
 
   // ── FOTO MINIATURE ──
