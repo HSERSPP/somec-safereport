@@ -1875,12 +1875,17 @@ document.getElementById('main-form').addEventListener('submit', function(e){
     doc.setTextColor(...WH);doc.setFontSize(10);doc.setFont('helvetica','bold');
     doc.text('TIPO EVENTO: '+evTxt,W/2,y+5.5,{align:'center'});y+=9;
     function rw(lbl,val,ry){
-      doc.setDrawColor(...GY);doc.setLineWidth(LW);doc.rect(M,ry,CW,7,'S');
-      doc.setFillColor(...GR);doc.rect(M,ry,46,7,'F');doc.line(M+46,ry,M+46,ry+7);
-      doc.setTextColor(...BL);doc.setFontSize(7);doc.setFont('helvetica','bold');doc.text(lbl.toUpperCase()+':',M+1,ry+5);
+      // Altezza calcolata sul numero di righe del testo wrappato, non più fissa a 7mm:
+      // altrimenti un valore lungo (es. Trattamento, Azioni correttive, NC) invade la riga successiva.
+      doc.setFont('helvetica','normal');doc.setFontSize(9);
+      const ls=doc.splitTextToSize(String(val||'—'),CW-49);
+      const rh=Math.max(7,ls.length*4.2+3.2);
+      doc.setDrawColor(...GY);doc.setLineWidth(LW);doc.rect(M,ry,CW,rh,'S');
+      doc.setFillColor(...GR);doc.rect(M,ry,46,rh,'F');doc.line(M+46,ry,M+46,ry+rh);
+      doc.setTextColor(...BL);doc.setFontSize(7);doc.setFont('helvetica','bold');doc.text(lbl.toUpperCase()+':',M+1,ry+(ls.length>1?5:rh/2+1.7));
       doc.setTextColor(...DK);doc.setFont('helvetica','normal');doc.setFontSize(9);
-      const ls=doc.splitTextToSize(String(val||'—'),CW-49);doc.text(ls,M+48,ry+5);
-      return ry+7;
+      doc.text(ls,M+48,ry+rh/2-((ls.length-1)*2.1)+1.7);
+      return ry+rh;
     }
     function sec(ttl,sy){
       doc.setFillColor(...BL);doc.rect(M,sy,CW,6,'F');
@@ -1902,9 +1907,10 @@ document.getElementById('main-form').addEventListener('submit', function(e){
     y+=2;
     y=sec('3 — Descrizione e Cause',y);
     const desc=document.getElementById('descrizione').value||'—';
-    const dL=doc.splitTextToSize(desc,CW-4);const dH=Math.max(12,dL.length*4.5+4);
+    doc.setFontSize(9);doc.setFont('helvetica','normal'); // font impostato PRIMA di misurare il wrap del testo
+    const dL=doc.splitTextToSize(desc,CW-6);const dH=Math.max(12,dL.length*4.5+5);
     doc.setDrawColor(...GY);doc.rect(M,y,CW,dH,'S');
-    doc.setTextColor(...DK);doc.setFontSize(9);doc.setFont('helvetica','normal');doc.text(dL,M+2,y+5);
+    doc.setTextColor(...DK);doc.setFontSize(9);doc.setFont('helvetica','normal');doc.text(dL,M+2,y+5.5);
     y+=dH+2;
     const din=document.getElementById('dinamica').value;if(din&&din!='')y=rw('Dinamica',din,y);
     if(bodyParts&&bodyParts.size>0)y=rw('Parti corpo',[...bodyParts].join(', '),y);
